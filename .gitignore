@@ -25,3 +25,20 @@ keystore.properties
 # OS
 .DS_Store
 Thumbs.db
+
+# Large binaries (native libs, installers)
+app/app/src/main/jniLibs/
+*.msi
+app/jdk-21-installer.msi
+
+# Kotlin cache
+app/.kotlin/
+
+# Dump files
+*.dump.xml
+app/app/app_dump.xml
+app/app/characters_dump.xml
+app/app/home_dump.xml
+app/app/home_live.xml
+app/app_dump.xml
+app/window_dump.xml
