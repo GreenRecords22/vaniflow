@@ -1,15 +1,49 @@
-﻿package com.vaniflow.app.engine.learning.tutor
+package com.vaniflow.app.engine.learning.tutor
 
+import com.vaniflow.app.domain.repository.LearnerProfileRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
  * Manages long-term learner progress, recurring mistakes, confidence growth, and personalized tutoring context.
+ * Connects directly to LearnerProfileRepository for persistence across app process restarts.
  */
 @Singleton
-class LearningMemoryManager @Inject constructor() {
+class LearningMemoryManager @Inject constructor(
+    private val learnerProfileRepository: LearnerProfileRepository? = null
+) {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    val profile: LearnerProfile = LearnerProfile()
+    var profile: LearnerProfile = LearnerProfile()
+        private set
+
+    init {
+        learnerProfileRepository?.let { repo ->
+            scope.launch {
+                try {
+                    val loaded = repo.getLearnerProfile()
+                    profile = loaded
+                } catch (_: Exception) {}
+            }
+        }
+    }
+
+    suspend fun loadPersistedProfile(): LearnerProfile {
+        learnerProfileRepository?.let { repo ->
+            val loaded = repo.getLearnerProfile()
+            profile = loaded
+        }
+        return profile
+    }
+
+    fun setProfile(newProfile: LearnerProfile) {
+        profile = newProfile
+        persistProfileAsync()
+    }
 
     fun onUtteranceAnalyzed(decision: TutorCorrectionDecision) {
         profile.totalUtterances++
@@ -28,6 +62,7 @@ class LearningMemoryManager @Inject constructor() {
             // Smooth natural confidence boost for clean speaking
             profile.speakingConfidenceScore = (profile.speakingConfidenceScore + 0.5f).coerceAtMost(100f)
         }
+        persistProfileAsync()
     }
 
     fun onRetryEvaluated(evaluation: RetryEvaluation) {
@@ -35,6 +70,17 @@ class LearningMemoryManager @Inject constructor() {
             profile.recordSuccessfulRetry(evaluation.originalError.ruleIdentifier, evaluation.originalError.category)
         } else if (evaluation.isPartiallyFixed) {
             profile.speakingConfidenceScore = (profile.speakingConfidenceScore + 0.8f).coerceAtMost(100f)
+        }
+        persistProfileAsync()
+    }
+
+    private fun persistProfileAsync() {
+        learnerProfileRepository?.let { repo ->
+            scope.launch {
+                try {
+                    repo.saveLearnerProfile(profile)
+                } catch (_: Exception) {}
+            }
         }
     }
 

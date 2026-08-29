@@ -66,3 +66,33 @@ interface SavedVocabularyDao {
     @Query("DELETE FROM saved_vocabulary")
     suspend fun deleteAllVocabulary()
 }
+
+@Dao
+interface LearnerProfileDao {
+    @Query("SELECT * FROM learner_profile WHERE id = 'default_learner_profile' LIMIT 1")
+    suspend fun getProfile(): com.vaniflow.app.data.local.db.entity.LearnerProfileEntity?
+
+    @Query("SELECT * FROM learner_profile WHERE id = 'default_learner_profile' LIMIT 1")
+    fun getProfileFlow(): Flow<com.vaniflow.app.data.local.db.entity.LearnerProfileEntity?>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun saveProfile(profile: com.vaniflow.app.data.local.db.entity.LearnerProfileEntity)
+
+    @Query("DELETE FROM learner_profile")
+    suspend fun deleteProfile()
+}
+
+@Dao
+interface DailyUsageDao {
+    @Query("SELECT * FROM daily_usage WHERE date = :date LIMIT 1")
+    suspend fun getUsageByDate(date: String): com.vaniflow.app.data.local.db.entity.DailyUsageEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun saveUsage(usage: com.vaniflow.app.data.local.db.entity.DailyUsageEntity)
+
+    @Query("SELECT * FROM daily_usage ORDER BY date DESC")
+    fun getAllUsage(): Flow<List<com.vaniflow.app.data.local.db.entity.DailyUsageEntity>>
+
+    @Query("DELETE FROM daily_usage")
+    suspend fun deleteAllUsage()
+}

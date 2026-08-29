@@ -62,4 +62,23 @@ class ConversationPromptBuilderTest {
         assertTrue(regen.contains("DIFFERENT"))
         assertTrue(regen.startsWith(base))
     }
+
+    @Test
+    fun tutoringContextIsProperlyIncludedWhenProvided() {
+        val tutoring = "[TUTORING CONTEXT]\nLearner Level: Elementary (A2). Needs practice on: tense.\nCoaching Directive: Naturally ask a question about yesterday."
+        val prompt = ConversationPromptBuilder.buildRuntimePrompt(
+            characterName = "Raya",
+            personalityPrompt = "You are Raya.",
+            scenarioTitle = "Order Coffee",
+            scenarioPrompt = "Practice ordering.",
+            userLevel = SkillLevel.BEGINNER,
+            history = history,
+            userInput = "Hello",
+            tutoringContext = tutoring
+        )
+
+        assertTrue(prompt.contains("[TUTORING CONTEXT]"))
+        assertTrue(prompt.contains("Needs practice on: tense"))
+        assertTrue(prompt.contains("Naturally ask a question about yesterday"))
+    }
 }

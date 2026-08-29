@@ -5,7 +5,9 @@ import androidx.room.Room
 import com.vaniflow.app.data.local.db.VaniFlowDatabase
 import com.vaniflow.app.data.local.db.dao.AICacheDao
 import com.vaniflow.app.data.local.db.dao.ConversationTurnDao
+import com.vaniflow.app.data.local.db.dao.DailyUsageDao
 import com.vaniflow.app.data.local.db.dao.GuestProfileDao
+import com.vaniflow.app.data.local.db.dao.LearnerProfileDao
 import com.vaniflow.app.data.local.db.dao.SavedVocabularyDao
 import com.vaniflow.app.data.local.db.dao.SessionDao
 import dagger.Module
@@ -26,7 +28,10 @@ object DatabaseModule {
             context,
             VaniFlowDatabase::class.java,
             "vaniflow.db"
-        ).fallbackToDestructiveMigration().build()
+        )
+            .addMigrations(VaniFlowDatabase.MIGRATION_1_2)
+            .fallbackToDestructiveMigration()
+            .build()
     }
 
     @Provides
@@ -52,5 +57,15 @@ object DatabaseModule {
     @Provides
     fun provideAICacheDao(database: VaniFlowDatabase): AICacheDao {
         return database.aiCacheDao()
+    }
+
+    @Provides
+    fun provideLearnerProfileDao(database: VaniFlowDatabase): LearnerProfileDao {
+        return database.learnerProfileDao()
+    }
+
+    @Provides
+    fun provideDailyUsageDao(database: VaniFlowDatabase): DailyUsageDao {
+        return database.dailyUsageDao()
     }
 }

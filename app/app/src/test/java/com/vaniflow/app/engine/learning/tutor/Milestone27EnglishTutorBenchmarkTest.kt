@@ -79,10 +79,12 @@ class Milestone27EnglishTutorBenchmarkTest {
             BenchmarkCase("Please open the light before entering.", true, EnglishErrorCategory.NATURAL_PHRASING, CorrectionSeverity.STYLE, "turn on the light", false),
             BenchmarkCase("Yesterday I took a bath of sun.", true, EnglishErrorCategory.NATURAL_PHRASING, CorrectionSeverity.STYLE, "sunbathed", false),
             BenchmarkCase("He passed out from college last summer.", true, EnglishErrorCategory.WORD_CHOICE, CorrectionSeverity.STYLE, "graduated from college", false),
-            BenchmarkCase("I very like Indian food.", true, EnglishErrorCategory.NATURAL_PHRASING, CorrectionSeverity.STYLE, "I really like", false)
+            BenchmarkCase("I very like Indian food.", true, EnglishErrorCategory.NATURAL_PHRASING, CorrectionSeverity.STYLE, "I really like", false),
+            BenchmarkCase("She go to school every day.", true, EnglishErrorCategory.SUBJECT_VERB_AGREEMENT, CorrectionSeverity.IMPORTANT, "goes", true),
+            BenchmarkCase("Yesterday I was go market.", true, EnglishErrorCategory.TENSE, CorrectionSeverity.IMPORTANT, "went", true)
         )
 
-        assertEquals("Must contain at least 30 benchmark test cases", 33, benchmarkCases.size)
+        assertEquals("Must contain at least 30 benchmark test cases", 35, benchmarkCases.size)
 
         for (caseItem in benchmarkCases) {
             val decision = tutorEngine.analyzeUtterance(caseItem.input)

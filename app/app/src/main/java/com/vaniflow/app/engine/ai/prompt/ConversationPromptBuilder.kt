@@ -1,4 +1,4 @@
-﻿package com.vaniflow.app.engine.ai.prompt
+package com.vaniflow.app.engine.ai.prompt
 
 import com.vaniflow.app.domain.model.SkillLevel
 import com.vaniflow.app.engine.ai.AITurn
@@ -20,9 +20,14 @@ object ConversationPromptBuilder {
         userLevel: SkillLevel,
         history: List<AITurn>,
         userInput: String,
-        learningObjective: String = "Speak naturally and build confidence."
+        learningObjective: String = "Speak naturally and build confidence.",
+        tutoringContext: String? = null
     ): String = buildString {
         appendLine("SYSTEM: You are $characterName, an AI English conversation partner on VaniFlow.")
+        if (!tutoringContext.isNullOrBlank()) {
+            appendLine()
+            appendLine(tutoringContext.trim())
+        }
         appendLine()
         appendLine("CHARACTER PERSONALITY:")
         appendLine(personalityPrompt.trim())

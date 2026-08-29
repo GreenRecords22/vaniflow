@@ -31,4 +31,12 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindUserPreferencesRepository(defaultUserPreferencesRepository: com.vaniflow.app.data.repository.DefaultUserPreferencesRepository): com.vaniflow.app.domain.repository.UserPreferencesRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindLearnerProfileRepository(defaultLearnerProfileRepository: com.vaniflow.app.data.repository.DefaultLearnerProfileRepository): com.vaniflow.app.domain.repository.LearnerProfileRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindDailyUsageRepository(defaultDailyUsageRepository: com.vaniflow.app.data.repository.DefaultDailyUsageRepository): com.vaniflow.app.domain.repository.DailyUsageRepository
 }

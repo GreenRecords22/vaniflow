@@ -116,8 +116,34 @@ class EnglishCorrectionEngine @Inject constructor() {
             severity = CorrectionSeverity.IMPORTANT,
             requiresRetry = true
         ),
+        Rule(
+            ruleId = "tense_was_go",
+            regex = "\\b(i|he|she|we|they)\\s+(?:was|were)\\s+go\\s+([a-zA-Z]+)\\b".toRegex(RegexOption.IGNORE_CASE),
+            replacementTransform = { match ->
+                val subj = match.groupValues[1]
+                val place = match.groupValues[2]
+                if (place.equals("market", ignoreCase = true)) {
+                    "$subj went to the market"
+                } else {
+                    "$subj went to $place"
+                }
+            },
+            explanation = "Say 'went to' when describing past travel (e.g. 'went to the market').",
+            category = EnglishErrorCategory.TENSE,
+            severity = CorrectionSeverity.IMPORTANT,
+            requiresRetry = true
+        ),
 
         // 3. Subject-Verb Agreement: "he don't" -> "he doesn't", "he have" -> "he has"
+        Rule(
+            ruleId = "sva_he_she_go",
+            regex = "\\b(he|she)\\s+go\\s+(to\\s+[a-zA-Z]+|home|every\\s+day|daily|often|always)\\b".toRegex(RegexOption.IGNORE_CASE),
+            replacementTransform = { match -> "${match.groupValues[1]} goes ${match.groupValues[2]}" },
+            explanation = "Use 'goes' with third-person singular subjects (he/she).",
+            category = EnglishErrorCategory.SUBJECT_VERB_AGREEMENT,
+            severity = CorrectionSeverity.IMPORTANT,
+            requiresRetry = true
+        ),
         Rule(
             ruleId = "sva_he_dont",
             regex = "\\b(he|she|it|my\\s+friend)\\s+don't\\b".toRegex(RegexOption.IGNORE_CASE),

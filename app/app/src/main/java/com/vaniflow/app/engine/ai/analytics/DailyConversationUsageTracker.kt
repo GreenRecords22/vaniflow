@@ -1,5 +1,14 @@
 package com.vaniflow.app.engine.ai.analytics
 
+import com.vaniflow.app.data.local.db.entity.DailyUsageEntity
+import com.vaniflow.app.domain.repository.DailyUsageRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
@@ -8,9 +17,13 @@ import javax.inject.Singleton
 
 /**
  * Tracks local daily conversation minutes, token consumption, cache savings, and provider failure telemetry.
+ * Automatically synchronizes with DailyUsageRepository for persistence across app restarts.
  */
 @Singleton
-class DailyConversationUsageTracker @Inject constructor() {
+class DailyConversationUsageTracker @Inject constructor(
+    private val dailyUsageRepository: DailyUsageRepository? = null
+) {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private val totalSpeakingSeconds = AtomicLong(0L)
     private val dailyMinutes = AtomicInteger(0)
@@ -26,6 +39,56 @@ class DailyConversationUsageTracker @Inject constructor() {
 
     var fairUseMinutesTarget: Int = 90
 
+    private var activeDate: String = getTodayDateString()
+
+    init {
+        dailyUsageRepository?.let { repo ->
+            scope.launch {
+                try {
+                    val today = getTodayDateString()
+                    activeDate = today
+                    val usage = repo.getUsageForDate(today)
+                    if (usage != null) {
+                        applyPersistedUsage(usage)
+                    }
+                } catch (_: Exception) {}
+            }
+        }
+    }
+
+    private fun getTodayDateString(): String {
+        return SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+    }
+
+    fun applyPersistedUsage(usage: DailyUsageEntity) {
+        activeDate = usage.date
+        totalSpeakingSeconds.set(usage.speakingSeconds)
+        dailyMinutes.set((usage.speakingSeconds / 60).toInt())
+        inputTokens.set(usage.inputTokens)
+        outputTokens.set(usage.outputTokens)
+        totalRequests.set(usage.totalRequests)
+        cacheHits.set(usage.cacheHits)
+        savedTokens.set(usage.savedTokens)
+    }
+
+    suspend fun loadPersistedUsage(date: String = getTodayDateString()) {
+        dailyUsageRepository?.let { repo ->
+            checkDateRollover(date)
+            val usage = repo.getUsageForDate(date)
+            if (usage != null) {
+                applyPersistedUsage(usage)
+            } else {
+                resetDaily(date)
+            }
+        }
+    }
+
+    private fun checkDateRollover(currentDate: String = getTodayDateString()) {
+        if (currentDate != activeDate) {
+            resetDaily(currentDate)
+        }
+    }
+
     fun recordTurn(
         providerId: String,
         inputTokenCount: Int,
@@ -33,6 +96,7 @@ class DailyConversationUsageTracker @Inject constructor() {
         latencyMs: Long,
         isCacheHit: Boolean = false
     ) {
+        checkDateRollover()
         totalRequests.incrementAndGet()
         providerUsage.computeIfAbsent(providerId) { AtomicInteger(0) }.incrementAndGet()
 
@@ -48,6 +112,7 @@ class DailyConversationUsageTracker @Inject constructor() {
                 AtomicLong((prev * 4 + latencyMs) / 5)
             }
         }
+        persistUsageAsync()
     }
 
     fun recordFailure(providerId: String) {
@@ -55,8 +120,30 @@ class DailyConversationUsageTracker @Inject constructor() {
     }
 
     fun addSpeakingDurationSeconds(seconds: Int) {
+        checkDateRollover()
         val totalSecs = totalSpeakingSeconds.addAndGet(seconds.toLong())
         dailyMinutes.set((totalSecs / 60).toInt())
+        persistUsageAsync()
+    }
+
+    private fun persistUsageAsync() {
+        dailyUsageRepository?.let { repo ->
+            scope.launch {
+                try {
+                    val entity = DailyUsageEntity(
+                        date = activeDate,
+                        speakingSeconds = totalSpeakingSeconds.get(),
+                        inputTokens = inputTokens.get(),
+                        outputTokens = outputTokens.get(),
+                        totalRequests = totalRequests.get(),
+                        cacheHits = cacheHits.get(),
+                        savedTokens = savedTokens.get(),
+                        updatedAt = System.currentTimeMillis()
+                    )
+                    repo.saveUsage(entity)
+                } catch (_: Exception) {}
+            }
+        }
     }
 
     fun isFairUseExceeded(): Boolean = (totalSpeakingSeconds.get() / 60) >= fairUseMinutesTarget
@@ -106,8 +193,10 @@ class DailyConversationUsageTracker @Inject constructor() {
         )
     }
 
-    fun resetDaily() {
+    fun resetDaily(newDate: String = getTodayDateString()) {
+        activeDate = newDate
         dailyMinutes.set(0)
+        totalSpeakingSeconds.set(0L)
         totalRequests.set(0)
         inputTokens.set(0L)
         outputTokens.set(0L)

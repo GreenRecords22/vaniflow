@@ -54,3 +54,30 @@ data class SavedVocabularyEntity(
     val example: String,
     val savedAt: Long = System.currentTimeMillis()
 )
+
+@Entity(tableName = "learner_profile")
+data class LearnerProfileEntity(
+    @PrimaryKey val id: String = "default_learner_profile",
+    val estimatedLevel: String,
+    val speakingConfidenceScore: Float,
+    val totalUtterances: Int,
+    val correctionsDelivered: Int,
+    val successfulRetries: Int,
+    val commonMistakesJson: String,
+    val masteredConceptsJson: String,
+    val conceptsNeedingPracticeJson: String,
+    val recentCorrectionsJson: String,
+    val updatedAt: Long = System.currentTimeMillis()
+)
+
+@Entity(tableName = "daily_usage")
+data class DailyUsageEntity(
+    @PrimaryKey val date: String, // Format: YYYY-MM-DD
+    val speakingSeconds: Long,
+    val inputTokens: Long,
+    val outputTokens: Long,
+    val totalRequests: Int,
+    val cacheHits: Int,
+    val savedTokens: Long,
+    val updatedAt: Long = System.currentTimeMillis()
+)

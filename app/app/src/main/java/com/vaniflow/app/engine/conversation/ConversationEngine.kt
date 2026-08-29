@@ -7,13 +7,25 @@ import com.vaniflow.app.data.local.db.entity.SessionEntity
 import com.vaniflow.app.domain.model.Character
 import com.vaniflow.app.domain.model.ConversationState
 import com.vaniflow.app.domain.model.ConversationTurn
+import com.vaniflow.app.domain.model.Correction
+import com.vaniflow.app.domain.model.CorrectionCategory
+import com.vaniflow.app.domain.model.FeedbackImportance
 import com.vaniflow.app.domain.model.Scenario
 import com.vaniflow.app.domain.model.SessionScore
+import com.vaniflow.app.domain.repository.DailyUsageRepository
+import com.vaniflow.app.domain.repository.LearnerProfileRepository
 import com.vaniflow.app.engine.ai.AIEngine
 import com.vaniflow.app.engine.ai.AITurn
+import com.vaniflow.app.engine.ai.analytics.DailyConversationUsageTracker
 import com.vaniflow.app.engine.ai.prompt.ConversationPromptBuilder
 import com.vaniflow.app.engine.character.CharacterPromptBuilder
 import com.vaniflow.app.engine.learning.FeedbackEngine
+import com.vaniflow.app.engine.learning.tutor.CorrectionSeverity
+import com.vaniflow.app.engine.learning.tutor.EnglishCorrectionEngine
+import com.vaniflow.app.engine.learning.tutor.EnglishError
+import com.vaniflow.app.engine.learning.tutor.EnglishErrorCategory
+import com.vaniflow.app.engine.learning.tutor.LearnerProfile
+import com.vaniflow.app.engine.learning.tutor.LearningMemoryManager
 import com.vaniflow.app.engine.scenario.ScenarioPromptBuilder
 import com.vaniflow.app.engine.tts.SentenceSplitter
 import com.vaniflow.app.engine.tts.TTSEngine
@@ -35,22 +47,37 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Production ConversationEngine orchestrating natural full-duplex hands-free voice loops.
- *
- * Implements:
- * 1. Automatic transition to LISTENING when AI finishes speaking (hands-free conversational loop).
- * 2. Instant barge-in interruption (<40ms) when user begins speaking during AI turn.
- * 3. Smart non-intrusive pedagogical feedback injection.
- * 4. Streaming sentence chunking and TTS playback.
+ * Production ConversationEngine orchestrating natural full-duplex hands-free voice loops
+ * integrated with real-time English Speaking Tutor pedagogy, persistent learner memory,
+ * and selective retry coaching.
  */
 @Singleton
 class ConversationEngine @Inject constructor(
     private val aiEngine: AIEngine,
     private val ttsEngine: TTSEngine,
     private val feedbackEngine: FeedbackEngine,
+    private val correctionEngine: EnglishCorrectionEngine = EnglishCorrectionEngine(),
+    private val learningMemoryManager: LearningMemoryManager = LearningMemoryManager(),
+    private val usageTracker: DailyConversationUsageTracker = DailyConversationUsageTracker(),
     private val sessionDao: SessionDao? = null,
-    private val conversationTurnDao: ConversationTurnDao? = null
+    private val conversationTurnDao: ConversationTurnDao? = null,
+    private val learnerProfileRepository: LearnerProfileRepository? = null,
+    private val dailyUsageRepository: DailyUsageRepository? = null
 ) {
+    enum class TutorState {
+        NORMAL,
+        GIVING_FEEDBACK,
+        WAITING_FOR_RETRY,
+        EVALUATING_RETRY
+    }
+
+    data class ActiveRetryContext(
+        val originalError: EnglishError,
+        val originalUtterance: String,
+        val correctedSentence: String,
+        var attemptsCount: Int = 1
+    )
+
     private val engineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     private val _state = MutableStateFlow(ConversationState.IDLE)
@@ -58,6 +85,9 @@ class ConversationEngine @Inject constructor(
 
     private val _turns = MutableStateFlow<List<ConversationTurn>>(emptyList())
     val turns: StateFlow<List<ConversationTurn>> = _turns.asStateFlow()
+
+    private val _tutorStateFlow = MutableStateFlow(TutorState.NORMAL)
+    val tutorStateFlow: StateFlow<TutorState> = _tutorStateFlow.asStateFlow()
 
     // Friendly, user-safe error message. Never exposes raw exceptions/paths.
     private val _errorMessage = MutableStateFlow<String?>(null)
@@ -71,6 +101,26 @@ class ConversationEngine @Inject constructor(
     private var activeGenerationJob: Job? = null
     private val isInterrupted = AtomicBoolean(false)
 
+    var tutorState: TutorState = TutorState.NORMAL
+        private set(value) {
+            field = value
+            _tutorStateFlow.value = value
+        }
+
+    var activeRetry: ActiveRetryContext? = null
+        private set
+
+    init {
+        learnerProfileRepository?.let { repo ->
+            engineScope.launch(Dispatchers.IO) {
+                try {
+                    val profile = repo.getLearnerProfile()
+                    learningMemoryManager.setProfile(profile)
+                } catch (_: Exception) {}
+            }
+        }
+    }
+
     fun startSession(character: Character, scenario: Scenario, sessionId: String = UUID.randomUUID().toString()) {
         activeGenerationJob?.cancel()
         currentSessionId = sessionId
@@ -79,6 +129,9 @@ class ConversationEngine @Inject constructor(
         sessionStartTimeMs = System.currentTimeMillis()
         isInterrupted.set(false)
         _errorMessage.value = null
+        tutorState = TutorState.NORMAL
+        activeRetry = null
+
         // Inform the AI router which character/scenario is active (for cache scoping + resets).
         aiEngine.setActiveContext(character.id, scenario.id)
 
@@ -97,6 +150,8 @@ class ConversationEngine @Inject constructor(
 
     /** Returns the stable session id persisted to Room (used by Session Summary lookup). */
     fun getCurrentSessionId(): String = currentSessionId
+
+    fun getLearnerProfile(): LearnerProfile = learningMemoryManager.profile
 
     /**
      * Removes a trailing empty AI turn (created as a streaming placeholder) so that
@@ -182,8 +237,130 @@ class ConversationEngine @Inject constructor(
         activeGenerationJob = coroutineContext[Job]
         _state.value = ConversationState.THINKING
 
-        // 1. Analyze for selective feedback
-        val correction = feedbackEngine.analyzeUtterance(userText)
+        val character = currentCharacter ?: return
+        val scenario = currentScenario ?: return
+
+        // -------------------------------------------------------------
+        // CASE A: Active Retry Flow (Learner is repeating a correction)
+        // -------------------------------------------------------------
+        if (tutorState == TutorState.WAITING_FOR_RETRY && activeRetry != null) {
+            val retryCtx = activeRetry!!
+            val evaluation = correctionEngine.evaluateRetry(
+                retryCtx.originalError,
+                retryCtx.originalUtterance,
+                userText
+            )
+            learningMemoryManager.onRetryEvaluated(evaluation)
+
+            val userTurn = ConversationTurn(
+                id = UUID.randomUUID().toString(),
+                sessionId = currentSessionId,
+                speaker = ConversationTurn.Speaker.USER,
+                text = userText,
+                timestamp = System.currentTimeMillis()
+            )
+            _turns.value = _turns.value + userTurn
+
+            if (evaluation.isFixed) {
+                // Successful retry: Praise and resume normal conversation
+                tutorState = TutorState.NORMAL
+                activeRetry = null
+
+                val praiseText = evaluation.praiseFeedback
+                val aiTurn = ConversationTurn(
+                    id = UUID.randomUUID().toString(),
+                    sessionId = currentSessionId,
+                    speaker = ConversationTurn.Speaker.AI,
+                    text = praiseText,
+                    timestamp = System.currentTimeMillis()
+                )
+                _turns.value = _turns.value + aiTurn
+
+                _state.value = ConversationState.AI_SPEAKING
+                val ttsRes = ttsEngine.speak(praiseText, character.voiceId, character.speakingRate)
+                if (!isInterrupted.get() && ttsRes !is TTSResult.Error) {
+                    _state.value = ConversationState.LISTENING
+                } else if (ttsRes is TTSResult.Error) {
+                    _errorMessage.value = "I couldn't play that response. Tap to retry."
+                    _state.value = ConversationState.LISTENING
+                }
+                return
+            } else if (retryCtx.attemptsCount < 2) {
+                // 2nd attempt: Give second gentle hint
+                retryCtx.attemptsCount++
+                val hint = "Almost! Remember: say '${retryCtx.originalError.suggestedText}' instead of '${retryCtx.originalError.originalText}'. Try it once more."
+                val aiTurn = ConversationTurn(
+                    id = UUID.randomUUID().toString(),
+                    sessionId = currentSessionId,
+                    speaker = ConversationTurn.Speaker.AI,
+                    text = hint,
+                    timestamp = System.currentTimeMillis()
+                )
+                _turns.value = _turns.value + aiTurn
+
+                _state.value = ConversationState.AI_SPEAKING
+                val ttsRes = ttsEngine.speak(hint, character.voiceId, character.speakingRate)
+                if (!isInterrupted.get() && ttsRes !is TTSResult.Error) {
+                    _state.value = ConversationState.LISTENING
+                } else if (ttsRes is TTSResult.Error) {
+                    _errorMessage.value = "I couldn't play that response. Tap to retry."
+                    _state.value = ConversationState.LISTENING
+                }
+                return
+            } else {
+                // Max retries reached (2 attempts): Acknowledge and resume naturally without trapping user
+                tutorState = TutorState.NORMAL
+                activeRetry = null
+                val exitMsg = "Good try! The natural way is: \"${retryCtx.correctedSentence}\". Let's keep going!"
+                val aiTurn = ConversationTurn(
+                    id = UUID.randomUUID().toString(),
+                    sessionId = currentSessionId,
+                    speaker = ConversationTurn.Speaker.AI,
+                    text = exitMsg,
+                    timestamp = System.currentTimeMillis()
+                )
+                _turns.value = _turns.value + aiTurn
+
+                _state.value = ConversationState.AI_SPEAKING
+                val ttsRes = ttsEngine.speak(exitMsg, character.voiceId, character.speakingRate)
+                if (!isInterrupted.get() && ttsRes !is TTSResult.Error) {
+                    _state.value = ConversationState.LISTENING
+                } else if (ttsRes is TTSResult.Error) {
+                    _errorMessage.value = "I couldn't play that response. Tap to retry."
+                    _state.value = ConversationState.LISTENING
+                }
+                return
+            }
+        }
+
+        // -------------------------------------------------------------
+        // CASE B: Normal Utterance Processing
+        // -------------------------------------------------------------
+        // 1. Analyze with EnglishCorrectionEngine & update LearningMemoryManager
+        val decision = correctionEngine.analyzeUtterance(userText)
+        learningMemoryManager.onUtteranceAnalyzed(decision)
+
+        val correction: Correction? = if (decision.hasError && decision.detectedErrors.isNotEmpty()) {
+            val primary = decision.detectedErrors.first()
+            Correction(
+                originalText = primary.originalText,
+                suggestedText = primary.suggestedText,
+                explanation = primary.explanation,
+                category = when (primary.category) {
+                    EnglishErrorCategory.TENSE, EnglishErrorCategory.GRAMMAR, EnglishErrorCategory.SUBJECT_VERB_AGREEMENT -> CorrectionCategory.GRAMMAR
+                    EnglishErrorCategory.ARTICLES, EnglishErrorCategory.PREPOSITIONS -> CorrectionCategory.PREPOSITIONS
+                    EnglishErrorCategory.NATURAL_PHRASING, EnglishErrorCategory.WORD_CHOICE, EnglishErrorCategory.WORD_ORDER -> CorrectionCategory.NATURAL_PHRASING
+                    else -> CorrectionCategory.GRAMMAR
+                },
+                importance = when (primary.severity) {
+                    CorrectionSeverity.CRITICAL, CorrectionSeverity.IMPORTANT -> FeedbackImportance.HIGH
+                    CorrectionSeverity.MINOR -> FeedbackImportance.MEDIUM
+                    CorrectionSeverity.STYLE -> FeedbackImportance.LOW
+                }
+            )
+        } else {
+            feedbackEngine.analyzeUtterance(userText)
+        }
 
         // 2. Add user turn with attached correction
         val userTurn = ConversationTurn(
@@ -195,16 +372,43 @@ class ConversationEngine @Inject constructor(
             correction = correction
         )
         _turns.value = _turns.value + userTurn
-
-        // Clean up any empty placeholder left by a previously cancelled generation
         pruneEmptyAiTurns()
 
-        // 3. Assemble compact contextual prompt with optional recast guidance
-        val character = currentCharacter ?: return
-        val scenario = currentScenario ?: return
+        // 3. If important error requires retry, deliver spoken correction & enter WAITING_FOR_RETRY
+        if (decision.hasError && decision.shouldRequestRetry && decision.primarySeverity >= CorrectionSeverity.IMPORTANT && decision.detectedErrors.isNotEmpty()) {
+            val primaryErr = decision.detectedErrors.first()
+            val correctedText = decision.correctedSentence ?: primaryErr.suggestedText
+            val spokenCorrection = "${primaryErr.explanation} Try saying: \"$correctedText\""
 
-        // Build history BEFORE the streaming placeholder is appended so the AI never
-        // receives a trailing empty assistant turn.
+            tutorState = TutorState.WAITING_FOR_RETRY
+            activeRetry = ActiveRetryContext(
+                originalError = primaryErr,
+                originalUtterance = userText,
+                correctedSentence = correctedText,
+                attemptsCount = 1
+            )
+
+            val aiTurn = ConversationTurn(
+                id = UUID.randomUUID().toString(),
+                sessionId = currentSessionId,
+                speaker = ConversationTurn.Speaker.AI,
+                text = spokenCorrection,
+                timestamp = System.currentTimeMillis()
+            )
+            _turns.value = _turns.value + aiTurn
+
+            _state.value = ConversationState.AI_SPEAKING
+            val ttsRes = ttsEngine.speak(spokenCorrection, character.voiceId, character.speakingRate)
+            if (!isInterrupted.get() && ttsRes !is TTSResult.Error) {
+                _state.value = ConversationState.LISTENING
+            } else if (ttsRes is TTSResult.Error) {
+                _errorMessage.value = "I couldn't play that response. Tap to retry."
+                _state.value = ConversationState.LISTENING
+            }
+            return
+        }
+
+        // 4. Normal AI Conversation Response Streaming
         val history = _turns.value.map { turn ->
             AITurn(
                 role = if (turn.speaker == ConversationTurn.Speaker.USER) AITurn.Role.USER else AITurn.Role.ASSISTANT,
@@ -214,6 +418,7 @@ class ConversationEngine @Inject constructor(
 
         val personaPrompt = CharacterPromptBuilder.buildPersonaPrompt(character)
         val scenarioPrompt = ScenarioPromptBuilder.buildScenarioPrompt(scenario)
+        val tutoringPrompt = learningMemoryManager.getTutoringPromptContext()
 
         val fullSystemPrompt = ConversationPromptBuilder.buildRuntimePrompt(
             characterName = character.name,
@@ -222,10 +427,10 @@ class ConversationEngine @Inject constructor(
             scenarioPrompt = scenarioPrompt,
             userLevel = character.level,
             history = history,
-            userInput = userText
+            userInput = userText,
+            tutoringContext = tutoringPrompt
         )
 
-        // 4. Create placeholder AI Turn for live token streaming
         val aiTurnId = UUID.randomUUID().toString()
         val aiTurn = ConversationTurn(
             id = aiTurnId,
@@ -236,7 +441,6 @@ class ConversationEngine @Inject constructor(
         )
         _turns.value = _turns.value + aiTurn
 
-        // 5. Stream Tokens & Concurrently Synthesize Sentences
         val accumulatedText = StringBuilder()
         val sentenceBuffer = StringBuilder()
 
@@ -256,7 +460,6 @@ class ConversationEngine @Inject constructor(
                     accumulatedText.append(token)
                     sentenceBuffer.append(token)
 
-                    // Update live AI turn bubble
                     val currentTurns = _turns.value.toMutableList()
                     val idx = currentTurns.indexOfFirst { it.id == aiTurnId }
                     if (idx != -1) {
@@ -265,7 +468,6 @@ class ConversationEngine @Inject constructor(
                         _turns.value = currentTurns
                     }
 
-                    // Check if complete sentence is available for early TTS playback
                     val sentences = SentenceSplitter.splitIntoSentences(sentenceBuffer.toString())
                     if (sentences.size > 1) {
                         val rawSentence = sentences.first()
@@ -291,7 +493,6 @@ class ConversationEngine @Inject constructor(
                     }
                 }
 
-            // Synthesize remaining sentence buffer
             val rawRemaining = sentenceBuffer.toString().trim()
             val remaining = cleanSpokenText(rawRemaining, character.name)
             if (remaining.isNotBlank() && !isInterrupted.get() && activeGenerationJob?.isCancelled != true) {
@@ -302,7 +503,6 @@ class ConversationEngine @Inject constructor(
                 }
             }
 
-            // If the AI produced no text at all, drop the empty placeholder turn
             if (accumulatedText.toString().isBlank() && !isInterrupted.get()) {
                 pruneEmptyAiTurns()
             }
@@ -310,7 +510,6 @@ class ConversationEngine @Inject constructor(
             if (!isInterrupted.get() && activeGenerationJob?.isCancelled != true &&
                 (_state.value == ConversationState.AI_SPEAKING || _state.value == ConversationState.THINKING)
             ) {
-                // Auto-loop to listening for full-duplex hands-free flow
                 _state.value = ConversationState.LISTENING
             }
         } catch (_: CancellationException) {
@@ -351,7 +550,11 @@ class ConversationEngine @Inject constructor(
         cancelAll()
         _errorMessage.value = null
         _state.value = ConversationState.SESSION_COMPLETE
-        val elapsedMinutes = (((System.currentTimeMillis() - sessionStartTimeMs) / 60000L).toInt()).coerceAtLeast(1)
+        val elapsedSeconds = ((System.currentTimeMillis() - sessionStartTimeMs) / 1000L).toInt().coerceAtLeast(1)
+        val elapsedMinutes = (elapsedSeconds / 60).coerceAtLeast(1)
+
+        // Record daily speaking time in usage tracker
+        usageTracker.addSpeakingDurationSeconds(elapsedSeconds)
 
         val totalCorrections = _turns.value.count { it.correction != null }
         val userTurnsCount = _turns.value.count { it.speaker == ConversationTurn.Speaker.USER }.coerceAtLeast(1)
