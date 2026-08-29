@@ -1,0 +1,48 @@
+<resources>
+    <string name="app_name">VaniFlow</string>
+    <string name="tagline">Speak. Improve. Become Fluent.</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_practice">Practice</string>
+    <string name="nav_progress">Progress</string>
+    <string name="nav_profile">Profile</string>
+
+    <!-- Home -->
+    <string name="start_speaking">Start Speaking</string>
+    <string name="quick_scenarios">Quick Scenarios</string>
+
+    <!-- Conversation States -->
+    <string name="tap_to_speak">Tap to speak</string>
+    <string name="listening">Listening…</string>
+    <string name="thinking">Thinking…</string>
+    <string name="speaking">Speaking…</string>
+    <string name="tap_to_interrupt">Tap to interrupt</string>
+    <string name="encouragement">Take your time. You\'re getting better.</string>
+
+    <!-- Session Summary -->
+    <string name="great_conversation">Great conversation! 🎉</string>
+    <string name="getting_better">You\'re getting better.</string>
+    <string name="practice_again">Practice Again</string>
+    <string name="back_to_home">Back to Home</string>
+    <string name="speaking_time">Speaking Time</string>
+    <string name="fluency">Fluency</string>
+    <string name="grammar">Grammar</string>
+    <string name="pronunciation">Pronunciation</string>
+    <string name="vocabulary">Vocabulary</string>
+    <string name="strongest_area">Your strongest area</string>
+    <string name="focus_next">Focus next</string>
+
+    <!-- Offline -->
+    <string name="offline_title">You\'re offline</string>
+    <string name="offline_message">Unlimited offline practice is still available. Continue learning without a connection.</string>
+
+    <!-- Permissions -->
+    <string name="mic_permission_title">Microphone Access</string>
+    <string name="mic_permission_rationale">VaniFlow needs microphone access to listen to your speech and help you practice English conversation.</string>
+
+    <!-- Profile -->
+    <string name="guest_user">Guest User</string>
+    <string name="no_account">No account yet</string>
+    <string name="version_label">VaniFlow v0.1.0-alpha</string>
+</resources>

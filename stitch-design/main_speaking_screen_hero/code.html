@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Main Speaking Screen - VaniFlow</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Manrope:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+                "on-secondary-fixed": "#00201c",
+                "on-error": "#ffffff",
+                "secondary-fixed-dim": "#a1d0c6",
+                "background": "#f5fbf8",
+                "primary": "#006b5f",
+                "inverse-primary": "#53dbc7",
+                "surface": "#f5fbf8",
+                "surface-bright": "#f5fbf8",
+                "on-secondary": "#ffffff",
+                "tertiary-fixed": "#ffddb3",
+                "on-tertiary-fixed-variant": "#633f00",
+                "on-secondary-fixed-variant": "#204e47",
+                "on-surface-variant": "#3c4946",
+                "on-primary-container": "#006156",
+                "primary-fixed-dim": "#53dbc7",
+                "on-tertiary-fixed": "#291800",
+                "surface-container-high": "#e4e9e7",
+                "surface-container": "#eaefec",
+                "surface-container-low": "#eff5f2",
+                "on-tertiary-container": "#774e00",
+                "surface-variant": "#dee4e1",
+                "surface-tint": "#006b5f",
+                "inverse-on-surface": "#ecf2ef",
+                "on-primary": "#ffffff",
+                "secondary": "#39665f",
+                "on-secondary-container": "#406c65",
+                "on-primary-fixed-variant": "#005047",
+                "surface-dim": "#d6dbd9",
+                "inverse-surface": "#2c3230",
+                "on-primary-fixed": "#00201c",
+                "secondary-fixed": "#bcece2",
+                "error": "#ba1a1a",
+                "on-error-container": "#93000a",
+                "outline": "#6c7a76",
+                "on-tertiary": "#ffffff",
+                "on-background": "#171d1b",
+                "error-container": "#ffdad6",
+                "secondary-container": "#bcece2",
+                "tertiary-container": "#ffc169",
+                "primary-container": "#5ae1cc",
+                "primary-fixed": "#74f8e3",
+                "tertiary-fixed-dim": "#f9bb64",
+                "tertiary": "#825500",
+                "surface-container-lowest": "#ffffff",
+                "outline-variant": "#bbcac5",
+                "surface-container-highest": "#dee4e1",
+                "on-surface": "#171d1b"
+        },
+        "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+        },
+        "spacing": {
+                "container-margin": "20px",
+                "md": "24px",
+                "xs": "8px",
+                "gutter": "16px",
+                "lg": "32px",
+                "base": "4px",
+                "sm": "16px",
+                "xl": "48px"
+        },
+        "fontFamily": {
+                "body-lg": [
+                        "Inter"
+                ],
+                "headline-lg": [
+                        "Manrope"
+                ],
+                "label-md": [
+                        "Inter"
+                ],
+                "label-sm": [
+                        "Inter"
+                ],
+                "body-md": [
+                        "Inter"
+                ],
+                "headline-md": [
+                        "Manrope"
+                ],
+                "headline-lg-mobile": [
+                        "Manrope"
+                ],
+                "display-lg": [
+                        "Manrope"
+                ]
+        },
+        "fontSize": {
+                "body-lg": [
+                        "18px",
+                        {
+                                "lineHeight": "28px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "headline-lg": [
+                        "32px",
+                        {
+                                "lineHeight": "40px",
+                                "letterSpacing": "-0.01em",
+                                "fontWeight": "700"
+                        }
+                ],
+                "label-md": [
+                        "14px",
+                        {
+                                "lineHeight": "20px",
+                                "letterSpacing": "0.01em",
+                                "fontWeight": "600"
+                        }
+                ],
+                "label-sm": [
+                        "12px",
+                        {
+                                "lineHeight": "16px",
+                                "fontWeight": "500"
+                        }
+                ],
+                "body-md": [
+                        "16px",
+                        {
+                                "lineHeight": "24px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "headline-md": [
+                        "24px",
+                        {
+                                "lineHeight": "32px",
+                                "fontWeight": "600"
+                        }
+                ],
+                "headline-lg-mobile": [
+                        "28px",
+                        {
+                                "lineHeight": "36px",
+                                "fontWeight": "700"
+                        }
+                ],
+                "display-lg": [
+                        "48px",
+                        {
+                                "lineHeight": "56px",
+                                "letterSpacing": "-0.02em",
+                                "fontWeight": "800"
+                        }
+                ]
+        }
+},
+    },
+  }
+</script>
+<style>
+        .pulse-ring {
+            animation: pulse 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.15); opacity: 0.3; }
+            100% { transform: scale(1); opacity: 0.8; }
+        }
+        .speaking-gradient {
+            background: linear-gradient(135deg, #4f46e5 0%, #8455ef 100%);
+        }
+        .mic-pulse {
+            animation: micPulse 1.5s infinite;
+        }
+        @keyframes micPulse {
+            0% { box-shadow: 0 0 0 0 rgba(0, 107, 95, 0.4); }
+            70% { box-shadow: 0 0 0 20px rgba(0, 107, 95, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 107, 95, 0); }
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background text-on-background min-h-screen flex flex-col font-body-md overflow-hidden antialiased">
+<!-- TopAppBar equivalent for transactional/speaking screen (suppressed normal nav) -->
+<header class="flex justify-between items-center px-container-margin py-sm w-full max-w-[1140px] mx-auto top-0 sticky bg-background z-10 flat no shadows">
+<button class="flex items-center justify-center w-[48px] h-[48px] rounded-full hover:bg-surface-variant transition-colors active:scale-95">
+<span class="material-symbols-outlined text-primary">arrow_back</span>
+</button>
+<div class="flex flex-col items-center">
+<div class="flex items-center space-x-2">
+<img alt="VaniFlow Logo" class="w-6 h-6 object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBXsU30mOcFBIuRYKoq5CBv7zkle6xJiSilTiC0iwXvjWdwlJXgo1HTIZpSHUvBaM3NKV2jzJZHRBAuooo36XyLE1Sd1b4GPQ8DPzcjqQIPtHAQiXhjD-XbcbJaJ3qlHkDE_W6QwjlHrttuWGaKI6IYjRIh5qUNAMtd9H2hyX3KJXO6Aw4fwEO2VecZoz55d11XmECU6PPMlHVMSloYVoOk13IuCoGJ3eIsxlAOUe4JwhmXbLDa4L1rDZXwPHr8tdav"/>
+<h1 class="font-headline-md text-headline-md font-bold text-on-background">Coffee Shop Chat</h1>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Level 3 Practice</span>
+</div>
+<div class="relative w-[48px] h-[48px] flex items-center justify-center">
+<svg class="w-10 h-10 transform -rotate-90" viewbox="0 0 36 36">
+<path class="text-surface-variant" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3"></path>
+<path class="text-primary transition-all duration-500 ease-out" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray="75, 100" stroke-width="3"></path>
+</svg>
+<span class="absolute font-label-sm text-label-sm text-primary font-bold">75%</span>
+</div>
+</header>
+<!-- Main Canvas -->
+<main class="flex-1 flex flex-col w-full max-w-[1140px] mx-auto px-container-margin relative pb-40 pt-8">
+<!-- Avatar Area -->
+<div class="flex flex-col items-center justify-center mb-12 relative z-0">
+<div class="relative w-48 h-48 md:w-64 md:h-64 flex items-center justify-center">
+<!-- Pulse rings for speaking indication -->
+<div class="absolute inset-0 rounded-full border-[3px] border-primary-fixed-dim pulse-ring opacity-60"></div>
+<div class="absolute inset-4 rounded-full border-[2px] border-secondary-fixed-dim pulse-ring" style="animation-delay: 0.5s;"></div>
+<img class="w-40 h-40 md:w-56 md:h-56 rounded-full object-cover shadow-[0px_8px_30px_rgba(0,107,95,0.15)] z-10 border-4 border-surface-container-lowest" data-alt="A highly realistic, modern portrait of an elegant young professional woman named Aanya in a chic coffee shop environment. She is smiling warmly and engaging in conversation. The lighting is soft, natural, and flattering, complementing the bright, light-mode corporate aesthetic. Soft background blur emphasizes her face. Soft depth, 20px subtle shadow." src="https://lh3.googleusercontent.com/aida-public/AB6AXuATrcbPNO-Qq6yhUDiHS7O4ADG9mC6y4PDhTpry_A1cigZy79izQ0WBWY1y1H14l555BT2_vIw1DqzA57ze124ERekr8GuekgOacjWt9sqqgRzT-scLgC5DCF9jQ58C0YZhPssiUD1S8MyrMq5AeWxZjso3YN-mxGXo4dF8uQQNK6qQe4DtHbQRL-X6_Tw3AhQkQ8wBVQHahn14R4Pjop2qPpeFsn3G2dNXpKXvyxginWvTaB_pTwQ"/>
+</div>
+<div class="mt-6 flex items-center space-x-2 bg-surface-container-lowest px-4 py-2 rounded-full shadow-[0px_4px_20px_rgba(0,107,95,0.05)] border border-outline-variant/30">
+<span class="w-2 h-2 rounded-full bg-[#10b981] animate-pulse"></span>
+<span class="font-label-md text-label-md text-on-surface-variant">Aanya is speaking...</span>
+</div>
+</div>
+<!-- Conversation Area -->
+<div class="flex-1 overflow-y-auto flex flex-col space-y-6 pb-20 w-full max-w-2xl mx-auto">
+<!-- AI Message -->
+<div class="flex flex-col items-start w-full">
+<div class="bg-surface-container-lowest text-on-background px-6 py-4 rounded-[20px] rounded-tl-sm shadow-[0px_4px_20px_rgba(0,107,95,0.05)] border border-outline-variant/30 max-w-[85%]">
+<p class="font-body-lg text-body-lg">Hi! Nice to meet you. Tell me a little about yourself.</p>
+</div>
+</div>
+<!-- User Message with Correction -->
+<div class="flex flex-col items-end w-full space-y-2">
+<div class="bg-primary-container text-on-primary-container px-6 py-4 rounded-[20px] rounded-tr-sm shadow-[0px_4px_20px_rgba(0,107,95,0.08)] max-w-[85%]">
+<p class="font-body-lg text-body-lg line-through opacity-80">I'm working in Jaipur.</p>
+</div>
+<!-- Correction Bubble -->
+<button class="bg-surface-bright border border-secondary-container/30 px-5 py-3 rounded-[16px] shadow-[0px_4px_20px_rgba(0,107,95,0.05)] flex items-start space-x-3 max-w-[85%] text-left hover:bg-surface-container-low transition-colors cursor-pointer group">
+<span class="material-symbols-outlined text-secondary mt-0.5 text-[20px] group-hover:text-primary transition-colors" data-weight="fill" style="font-variation-settings: 'FILL' 1;">lightbulb</span>
+<div>
+<span class="font-label-sm text-label-sm text-secondary uppercase tracking-wider block mb-1 group-hover:text-primary transition-colors">More Natural</span>
+<p class="font-body-md text-body-md text-on-background font-medium">"I work in Jaipur."</p>
+</div>
+</button>
+</div>
+</div>
+</main>
+<!-- Bottom Action Area (Fixed) -->
+<div class="fixed bottom-0 left-0 w-full bg-gradient-to-t from-surface via-surface to-transparent pt-12 pb-8 px-container-margin z-20 flex flex-col items-center justify-end">
+<!-- Waveform Visualization (Subtle) -->
+<div class="flex items-end justify-center space-x-1 mb-6 h-8 opacity-40">
+<div class="w-1.5 h-3 bg-primary rounded-full animate-[pulse_1s_ease-in-out_infinite_alternate]" style="animation-delay: 0.1s;"></div>
+<div class="w-1.5 h-6 bg-primary rounded-full animate-[pulse_1.2s_ease-in-out_infinite_alternate]" style="animation-delay: 0.2s;"></div>
+<div class="w-1.5 h-8 bg-primary rounded-full animate-[pulse_0.8s_ease-in-out_infinite_alternate]" style="animation-delay: 0.3s;"></div>
+<div class="w-1.5 h-4 bg-primary rounded-full animate-[pulse_1.1s_ease-in-out_infinite_alternate]" style="animation-delay: 0.4s;"></div>
+<div class="w-1.5 h-7 bg-primary rounded-full animate-[pulse_0.9s_ease-in-out_infinite_alternate]" style="animation-delay: 0.5s;"></div>
+<div class="w-1.5 h-3 bg-primary rounded-full animate-[pulse_1s_ease-in-out_infinite_alternate]" style="animation-delay: 0.6s;"></div>
+</div>
+<!-- Large Mic Button -->
+<button class="w-20 h-20 bg-primary-container text-on-primary-container rounded-full flex items-center justify-center shadow-[0px_8px_30px_rgba(0,107,95,0.2)] mic-pulse transition-transform hover:scale-105 active:scale-95 relative">
+<span class="material-symbols-outlined text-[36px]" data-weight="fill" style="font-variation-settings: 'FILL' 1;">mic</span>
+</button>
+<div class="flex flex-col items-center mt-4">
+<span class="font-label-sm text-label-sm text-on-surface-variant font-medium">Tap to interrupt</span>
+<span class="font-label-sm text-label-sm text-secondary mt-1 opacity-75">Take your time. You're getting better.</span>
+</div>
+</div>
+</body></html>

@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>VaniFlow - Progress Screen</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Manrope:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+                "on-error": "#ffffff",
+                "on-secondary": "#ffffff",
+                "on-background": "#171d1b",
+                "on-surface-variant": "#3c4946",
+                "on-tertiary": "#ffffff",
+                "inverse-primary": "#53dbc7",
+                "tertiary-fixed-dim": "#f9bb64",
+                "on-secondary-fixed": "#00201c",
+                "surface-container-highest": "#dee4e1",
+                "tertiary-container": "#ffc169",
+                "on-primary-fixed-variant": "#005047",
+                "surface-bright": "#f5fbf8",
+                "on-primary-container": "#006156",
+                "background": "#f5fbf8",
+                "on-error-container": "#93000a",
+                "inverse-surface": "#2c3230",
+                "on-secondary-fixed-variant": "#204e47",
+                "inverse-on-surface": "#ecf2ef",
+                "surface-container-high": "#e4e9e7",
+                "surface": "#f5fbf8",
+                "surface-container-lowest": "#ffffff",
+                "tertiary-fixed": "#ffddb3",
+                "primary-container": "#5ae1cc",
+                "surface-container-low": "#eff5f2",
+                "on-tertiary-fixed-variant": "#633f00",
+                "on-tertiary-fixed": "#291800",
+                "on-primary-fixed": "#00201c",
+                "primary": "#006b5f",
+                "surface-container": "#eaefec",
+                "on-secondary-container": "#406c65",
+                "secondary-fixed-dim": "#a1d0c6",
+                "secondary-container": "#bcece2",
+                "error": "#ba1a1a",
+                "on-primary": "#ffffff",
+                "primary-fixed-dim": "#53dbc7",
+                "outline-variant": "#bbcac5",
+                "secondary-fixed": "#bcece2",
+                "surface-tint": "#006b5f",
+                "surface-dim": "#d6dbd9",
+                "tertiary": "#825500",
+                "on-surface": "#171d1b",
+                "secondary": "#39665f",
+                "on-tertiary-container": "#774e00",
+                "outline": "#6c7a76",
+                "primary-fixed": "#74f8e3",
+                "surface-variant": "#dee4e1",
+                "error-container": "#ffdad6"
+        },
+        "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+        },
+        "spacing": {
+                "gutter": "16px",
+                "sm": "16px",
+                "container-margin": "20px",
+                "base": "4px",
+                "xl": "48px",
+                "md": "24px",
+                "xs": "8px",
+                "lg": "32px"
+        },
+        "fontFamily": {
+                "display-lg": [
+                        "Manrope"
+                ],
+                "body-md": [
+                        "Inter"
+                ],
+                "headline-lg": [
+                        "Manrope"
+                ],
+                "headline-lg-mobile": [
+                        "Manrope"
+                ],
+                "headline-md": [
+                        "Manrope"
+                ],
+                "body-lg": [
+                        "Inter"
+                ],
+                "label-sm": [
+                        "Inter"
+                ],
+                "label-md": [
+                        "Inter"
+                ]
+        },
+        "fontSize": {
+                "display-lg": [
+                        "48px",
+                        {
+                                "lineHeight": "56px",
+                                "letterSpacing": "-0.02em",
+                                "fontWeight": "800"
+                        }
+                ],
+                "body-md": [
+                        "16px",
+                        {
+                                "lineHeight": "24px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "headline-lg": [
+                        "32px",
+                        {
+                                "lineHeight": "40px",
+                                "letterSpacing": "-0.01em",
+                                "fontWeight": "700"
+                        }
+                ],
+                "headline-lg-mobile": [
+                        "28px",
+                        {
+                                "lineHeight": "36px",
+                                "fontWeight": "700"
+                        }
+                ],
+                "headline-md": [
+                        "24px",
+                        {
+                                "lineHeight": "32px",
+                                "fontWeight": "600"
+                        }
+                ],
+                "body-lg": [
+                        "18px",
+                        {
+                                "lineHeight": "28px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "label-sm": [
+                        "12px",
+                        {
+                                "lineHeight": "16px",
+                                "fontWeight": "500"
+                        }
+                ],
+                "label-md": [
+                        "14px",
+                        {
+                                "lineHeight": "20px",
+                                "letterSpacing": "0.01em",
+                                "fontWeight": "600"
+                        }
+                ]
+        }
+},
+    },
+  }
+</script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background text-on-background min-h-screen pb-24 md:pb-0">
+<!-- TopAppBar (Web) -->
+<header class="hidden md:flex justify-between items-center px-container-margin py-sm w-full max-w-[1140px] mx-auto bg-background dark:bg-background w-full top-0 sticky z-40">
+<div class="flex items-center gap-sm">
+<img class="w-10 h-10 rounded-full object-cover border border-outline-variant/30" data-alt="A small, professional portrait photo of a user for a profile avatar in a light mode, premium AI application interface. Corporate soft lighting, clear features, white background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAK05g2VgwQevHunBFT-9Skynk-Nzw567j7VyWuqU8GoYowyV70lt4R4QRbZyKMxwUiQwvG0XYNfn0AueZSx2DrTDPEK1yLK-z_LscGvHGDDGhHFHfzK2szwJ82oH70jwPrFf-2eBpnESI_W_cMevvm73wQR5Xbl3TDve3w_jz8NZVsHJst8mdJlt8Bha4TJpV0vDB6fzR5zfgdIO7zUTYDpvhmjdSzd3IzsIOqie4azAiRarhjcEk"/>
+<h1 class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed">VaniFlow</h1>
+</div>
+<nav class="flex gap-md">
+<a class="text-on-surface-variant hover:opacity-80 transition-opacity active:scale-95 transition-transform font-label-md text-label-md" href="#">Home</a>
+<a class="text-on-surface-variant hover:opacity-80 transition-opacity active:scale-95 transition-transform font-label-md text-label-md" href="#">Practice</a>
+<a class="text-primary font-bold hover:opacity-80 transition-opacity active:scale-95 transition-transform font-label-md text-label-md" href="#">Progress</a>
+<a class="text-on-surface-variant hover:opacity-80 transition-opacity active:scale-95 transition-transform font-label-md text-label-md" href="#">Profile</a>
+</nav>
+<button class="hover:opacity-80 transition-opacity active:scale-95 transition-transform text-primary dark:text-primary-fixed">
+<span class="material-symbols-outlined text-[24px]">settings</span>
+</button>
+</header>
+<!-- TopAppBar (Mobile) -->
+<header class="md:hidden flex justify-between items-center px-container-margin py-sm w-full bg-background dark:bg-background top-0 sticky z-40">
+<div class="flex items-center gap-sm">
+<img class="w-10 h-10 rounded-full object-cover border border-outline-variant/30" data-alt="A small, professional portrait photo of a user for a profile avatar in a light mode, premium AI application interface. Corporate soft lighting, clear features, white background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDZoavPuOPRVEXP4GnyFQGjtAm9fi1HP1ZHsHYPb0RjyTEA38i3YYCHPsN7UODR2SdzotfsbjUpUI-INvD3nXi0WFLnaFS005QiEEtGeoqlqot-zZCOhPpUeYBmP8RAf-oHFhFpxYe-C0sXv4PGjTrVMqCBSRiVR2GcrZnrsnkYq559q9Gc_DYc2bJ4rcxb3CRHcxqWvRlzdKBg93n_rbIu4Rbr_L4LWj77aLG_FnpgR1Z2gdy58KY"/>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary dark:text-primary-fixed">VaniFlow</h1>
+</div>
+<button class="hover:opacity-80 transition-opacity active:scale-95 transition-transform text-primary dark:text-primary-fixed">
+<span class="material-symbols-outlined text-[24px]">settings</span>
+</button>
+</header>
+<!-- Main Content -->
+<main class="w-full max-w-[1140px] mx-auto px-container-margin pt-lg pb-xl">
+<!-- Header -->
+<div class="mb-lg">
+<h2 class="font-headline-lg text-headline-lg md:font-display-lg md:text-display-lg text-on-background mb-xs">Your speaking is improving.</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant">Here is a detailed overview of your recent learning activity.</p>
+</div>
+<!-- KPI Grid -->
+<div class="grid grid-cols-2 md:grid-cols-3 gap-sm md:gap-md mb-xl">
+<!-- Streak -->
+<div class="bg-surface-container-lowest rounded-[20px] p-sm border border-outline-variant/30 shadow-[0px_4px_20px_rgba(0,107,95,0.05)] hover:shadow-[0px_8px_30px_rgba(0,107,95,0.08)] transition-shadow flex flex-col justify-center items-center h-[120px]">
+<span class="material-symbols-outlined text-[32px] text-tertiary-container mb-xs" style="font-variation-settings: 'FILL' 1;">local_fire_department</span>
+<div class="font-headline-md text-headline-md text-on-background">5 Days</div>
+<div class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Streak</div>
+</div>
+<!-- Total Minutes -->
+<div class="bg-surface-container-lowest rounded-[20px] p-sm border border-outline-variant/30 shadow-[0px_4px_20px_rgba(0,107,95,0.05)] hover:shadow-[0px_8px_30px_rgba(0,107,95,0.08)] transition-shadow flex flex-col justify-center items-center h-[120px]">
+<span class="material-symbols-outlined text-[32px] text-primary mb-xs">schedule</span>
+<div class="font-headline-md text-headline-md text-on-background">120</div>
+<div class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Minutes</div>
+</div>
+<!-- Fluency Trend -->
+<div class="bg-surface-container-lowest rounded-[20px] p-sm border border-outline-variant/30 shadow-[0px_4px_20px_rgba(0,107,95,0.05)] hover:shadow-[0px_8px_30px_rgba(0,107,95,0.08)] transition-shadow flex flex-col justify-center items-center h-[120px] col-span-2 md:col-span-1 relative overflow-hidden">
+<div class="flex items-center gap-2 mb-xs z-10">
+<span class="material-symbols-outlined text-[24px] text-primary">trending_up</span>
+<span class="font-headline-md text-headline-md text-primary">+15%</span>
+</div>
+<div class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider z-10">Fluency</div>
+<!-- Simple Line Chart Mock -->
+<svg class="absolute bottom-0 left-0 w-full h-1/2 opacity-20 text-primary" preserveaspectratio="none" viewbox="0 0 100 50">
+<path d="M0,50 L0,30 Q20,20 40,35 T80,15 L100,5 L100,50 Z" fill="currentColor"></path>
+<path d="M0,30 Q20,20 40,35 T80,15 L100,5" fill="none" stroke="currentColor" stroke-width="2"></path>
+</svg>
+</div>
+</div>
+<!-- Bento Grid Layout for Main Content -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-md">
+<!-- Weekly Chart (Spans 8 cols on desktop) -->
+<div class="md:col-span-8 bg-surface-container-lowest rounded-[20px] p-md border border-outline-variant/30 shadow-[0px_4px_20px_rgba(0,107,95,0.05)] relative overflow-hidden min-h-[300px] flex flex-col">
+<div class="flex justify-between items-center mb-md z-10 relative">
+<h3 class="font-headline-md text-headline-md text-on-background">Speaking Time</h3>
+<select class="bg-surface border border-outline-variant/50 rounded-lg font-label-sm text-label-sm text-on-surface-variant px-3 py-1 focus:border-primary focus:ring-1 focus:ring-primary outline-none">
+<option>This Week</option>
+<option>Last Week</option>
+<option>This Month</option>
+</select>
+</div>
+<!-- Mock Chart Area -->
+<div class="flex-grow flex items-end gap-2 justify-between z-10 relative pb-2 px-2 mt-4">
+<div class="flex flex-col items-center w-full gap-2 group">
+<div class="w-full bg-primary-container/20 rounded-t-sm h-[40%] group-hover:bg-primary-container/40 transition-colors relative">
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-inverse-surface text-inverse-on-surface font-label-sm text-label-sm px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">15m</div>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Mon</span>
+</div>
+<div class="flex flex-col items-center w-full gap-2 group">
+<div class="w-full bg-primary-container/20 rounded-t-sm h-[65%] group-hover:bg-primary-container/40 transition-colors relative">
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-inverse-surface text-inverse-on-surface font-label-sm text-label-sm px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">25m</div>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Tue</span>
+</div>
+<div class="flex flex-col items-center w-full gap-2 group">
+<div class="w-full bg-primary-container rounded-t-sm h-[85%] relative shadow-[0_0_15px_rgba(0,107,95,0.3)]">
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-inverse-surface text-inverse-on-surface font-label-sm text-label-sm px-2 py-1 rounded whitespace-nowrap">35m</div>
+</div>
+<span class="font-label-sm text-label-sm text-primary font-bold">Wed</span>
+</div>
+<div class="flex flex-col items-center w-full gap-2 group">
+<div class="w-full bg-primary-container/20 rounded-t-sm h-[30%] group-hover:bg-primary-container/40 transition-colors relative">
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-inverse-surface text-inverse-on-surface font-label-sm text-label-sm px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">10m</div>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Thu</span>
+</div>
+<div class="flex flex-col items-center w-full gap-2 group">
+<div class="w-full bg-primary-container/20 rounded-t-sm h-[50%] group-hover:bg-primary-container/40 transition-colors relative">
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-inverse-surface text-inverse-on-surface font-label-sm text-label-sm px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">20m</div>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Fri</span>
+</div>
+<div class="flex flex-col items-center w-full gap-2 group">
+<div class="w-full bg-primary-container/20 rounded-t-sm h-[20%] group-hover:bg-primary-container/40 transition-colors relative">
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-inverse-surface text-inverse-on-surface font-label-sm text-label-sm px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">5m</div>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Sat</span>
+</div>
+<div class="flex flex-col items-center w-full gap-2 group">
+<div class="w-full bg-primary-container/20 rounded-t-sm h-[70%] group-hover:bg-primary-container/40 transition-colors relative">
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-inverse-surface text-inverse-on-surface font-label-sm text-label-sm px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">30m</div>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Sun</span>
+</div>
+</div>
+<!-- Background decorative elements for chart -->
+<div class="absolute inset-0 pointer-events-none z-0 opacity-[0.03]" style="background-image: repeating-linear-gradient(0deg, transparent, transparent 39px, #1b1b24 39px, #1b1b24 40px);"></div>
+</div>
+<!-- Your Improvements (Spans 4 cols on desktop) -->
+<div class="md:col-span-4 bg-surface-container-lowest rounded-[20px] p-md border border-outline-variant/30 shadow-[0px_4px_20px_rgba(0,107,95,0.05)] flex flex-col h-full">
+<h3 class="font-headline-md text-headline-md text-on-background mb-md flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">auto_awesome</span>
+                    Your improvements
+                </h3>
+<ul class="flex flex-col gap-3 flex-grow">
+<li class="p-3 bg-surface-container rounded-lg border border-outline-variant/30 flex items-center justify-between">
+<span class="font-body-md text-body-md text-on-background font-medium">Past tense mistakes</span>
+<div class="flex items-center gap-1 text-primary">
+<span class="material-symbols-outlined text-[16px]">arrow_downward</span>
+<span class="font-label-md text-label-md font-bold">18%</span>
+</div>
+</li>
+<li class="p-3 bg-surface-container rounded-lg border border-outline-variant/30 flex items-center justify-between">
+<span class="font-body-md text-body-md text-on-background font-medium">Pronunciation</span>
+<div class="flex items-center gap-1 text-primary">
+<span class="material-symbols-outlined text-[16px]">arrow_upward</span>
+<span class="font-label-md text-label-md font-bold">7%</span>
+</div>
+</li>
+<li class="p-3 bg-surface-container rounded-lg border border-outline-variant/30 flex items-center justify-between">
+<span class="font-body-md text-body-md text-on-background font-medium">Speaking confidence</span>
+<div class="flex items-center gap-1 text-primary">
+<span class="material-symbols-outlined text-[16px]">arrow_upward</span>
+<span class="font-label-md text-label-md font-bold">12%</span>
+</div>
+</li>
+</ul>
+</div>
+<!-- AI Coach Recommends (Spans full width) -->
+<div class="md:col-span-12 bg-primary-container/10 rounded-[20px] p-md border border-primary-container/30 shadow-[0px_4px_20px_rgba(0,107,95,0.05)] flex flex-col md:flex-row items-center gap-md">
+<div class="bg-primary-container p-3 rounded-full flex-shrink-0">
+<span class="material-symbols-outlined text-[32px] text-on-primary-container">psychology</span>
+</div>
+<div class="flex-grow text-center md:text-left">
+<h3 class="font-headline-md text-headline-md text-on-background mb-1">Your AI Coach recommends</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">Practice storytelling today.</p>
+</div>
+<button class="w-full md:w-auto px-6 py-3 rounded-xl bg-primary text-on-primary font-label-md text-label-md hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 flex-shrink-0">
+<span class="material-symbols-outlined text-[20px]">play_arrow</span>
+                    Start Practice
+                </button>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full flex justify-around items-center px-4 pt-3 pb-6 bg-surface/80 dark:bg-surface-container/80 backdrop-blur-lg fixed bottom-0 w-full z-50 rounded-t-[20px] border-t border-outline-variant/30 shadow-[0px_-4px_20px_rgba(0,107,95,0.05)]">
+<a class="flex flex-col items-center justify-center text-on-surface-variant/40 dark:text-on-surface-variant/60 hover:text-primary transition-colors active:scale-90 transition-transform duration-200 w-16" href="#">
+<span class="material-symbols-outlined text-[24px] mb-1">home</span>
+<span class="font-label-sm text-label-sm">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant/40 dark:text-on-surface-variant/60 hover:text-primary transition-colors active:scale-90 transition-transform duration-200 w-16" href="#">
+<span class="material-symbols-outlined text-[24px] mb-1">record_voice_over</span>
+<span class="font-label-sm text-label-sm">Practice</span>
+</a>
+<a class="flex flex-col items-center justify-center text-primary dark:text-primary-fixed font-semibold hover:text-primary transition-colors active:scale-90 transition-transform duration-200 w-16" href="#">
+<span class="material-symbols-outlined text-[24px] mb-1" style="font-variation-settings: 'FILL' 1;">bar_chart</span>
+<span class="font-label-sm text-label-sm text-primary">Progress</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant/40 dark:text-on-surface-variant/60 hover:text-primary transition-colors active:scale-90 transition-transform duration-200 w-16" href="#">
+<span class="material-symbols-outlined text-[24px] mb-1">person</span>
+<span class="font-label-sm text-label-sm">Profile</span>
+</a>
+</nav>
+</body></html>

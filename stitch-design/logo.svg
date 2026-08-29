@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 600 600" role="img" aria-label="Logo preview"><rect x="36" y="36" width="528" height="528" rx="108" fill="#ffffff"/>
+				<g transform="translate(180 123)">
+					<svg width="240" height="240" viewBox="0 0 24 24" overflow="visible">
+						<g transform="rotate(0 12 12)" fill="#21cab6" fill-opacity="0" stroke="#30d9c5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M8 3H3v5"/><path d="M12 22v-8.3a4 4 0 0 0-1.172-2.872L3 3"/><path d="m15 9 6-6"/></g>
+					</svg>
+				</g><text x="300" y="458" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="94" font-weight="800" font-style="italic" letter-spacing="-0.01em" fill="#21cab6">VaniFlow</text></svg>

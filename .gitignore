@@ -1,0 +1,27 @@
+# Build artifacts
+build/
+.gradle/
+*.apk
+*.aar
+*.aab
+
+# Local configs and credentials
+local.properties
+.env
+*.env
+google-services.json
+service-account*.json
+*.jks
+*.keystore
+*.key
+*.pem
+keystore.properties
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db

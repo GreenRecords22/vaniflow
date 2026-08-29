@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base application theme (used by system before Compose loads) -->
+    <style name="Theme.VaniFlow" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@android:color/white</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+
+    <!-- Splash screen theme -->
+    <style name="Theme.VaniFlow.Splash" parent="Theme.VaniFlow">
+        <item name="android:windowBackground">@android:color/white</item>
+    </style>
+</resources>

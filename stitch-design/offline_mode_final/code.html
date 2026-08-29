@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>VaniFlow - Offline</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Manrope:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+                "on-error": "#ffffff",
+                "on-secondary": "#ffffff",
+                "on-background": "#171d1b",
+                "on-surface-variant": "#3c4946",
+                "on-tertiary": "#ffffff",
+                "inverse-primary": "#53dbc7",
+                "tertiary-fixed-dim": "#f9bb64",
+                "on-secondary-fixed": "#00201c",
+                "surface-container-highest": "#dee4e1",
+                "tertiary-container": "#ffc169",
+                "on-primary-fixed-variant": "#005047",
+                "surface-bright": "#f5fbf8",
+                "on-primary-container": "#006156",
+                "background": "#f5fbf8",
+                "on-error-container": "#93000a",
+                "inverse-surface": "#2c3230",
+                "on-secondary-fixed-variant": "#204e47",
+                "inverse-on-surface": "#ecf2ef",
+                "surface-container-high": "#e4e9e7",
+                "surface": "#f5fbf8",
+                "surface-container-lowest": "#ffffff",
+                "tertiary-fixed": "#ffddb3",
+                "primary-container": "#5ae1cc",
+                "surface-container-low": "#eff5f2",
+                "on-tertiary-fixed-variant": "#633f00",
+                "on-tertiary-fixed": "#291800",
+                "on-primary-fixed": "#00201c",
+                "primary": "#006b5f",
+                "surface-container": "#eaefec",
+                "on-secondary-container": "#406c65",
+                "secondary-fixed-dim": "#a1d0c6",
+                "secondary-container": "#bcece2",
+                "error": "#ba1a1a",
+                "on-primary": "#ffffff",
+                "primary-fixed-dim": "#53dbc7",
+                "outline-variant": "#bbcac5",
+                "secondary-fixed": "#bcece2",
+                "surface-tint": "#006b5f",
+                "surface-dim": "#d6dbd9",
+                "tertiary": "#825500",
+                "on-surface": "#171d1b",
+                "secondary": "#39665f",
+                "on-tertiary-container": "#774e00",
+                "outline": "#6c7a76",
+                "primary-fixed": "#74f8e3",
+                "surface-variant": "#dee4e1",
+                "error-container": "#ffdad6"
+        },
+        "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+        },
+        "spacing": {
+                "gutter": "16px",
+                "sm": "16px",
+                "container-margin": "20px",
+                "base": "4px",
+                "xl": "48px",
+                "md": "24px",
+                "xs": "8px",
+                "lg": "32px"
+        },
+        "fontFamily": {
+                "display-lg": [
+                        "Manrope"
+                ],
+                "body-md": [
+                        "Inter"
+                ],
+                "headline-lg": [
+                        "Manrope"
+                ],
+                "headline-lg-mobile": [
+                        "Manrope"
+                ],
+                "headline-md": [
+                        "Manrope"
+                ],
+                "body-lg": [
+                        "Inter"
+                ],
+                "label-sm": [
+                        "Inter"
+                ],
+                "label-md": [
+                        "Inter"
+                ]
+        },
+        "fontSize": {
+                "display-lg": [
+                        "48px",
+                        {
+                                "lineHeight": "56px",
+                                "letterSpacing": "-0.02em",
+                                "fontWeight": "800"
+                        }
+                ],
+                "body-md": [
+                        "16px",
+                        {
+                                "lineHeight": "24px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "headline-lg": [
+                        "32px",
+                        {
+                                "lineHeight": "40px",
+                                "letterSpacing": "-0.01em",
+                                "fontWeight": "700"
+                        }
+                ],
+                "headline-lg-mobile": [
+                        "28px",
+                        {
+                                "lineHeight": "36px",
+                                "fontWeight": "700"
+                        }
+                ],
+                "headline-md": [
+                        "24px",
+                        {
+                                "lineHeight": "32px",
+                                "fontWeight": "600"
+                        }
+                ],
+                "body-lg": [
+                        "18px",
+                        {
+                                "lineHeight": "28px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "label-sm": [
+                        "12px",
+                        {
+                                "lineHeight": "16px",
+                                "fontWeight": "500"
+                        }
+                ],
+                "label-md": [
+                        "14px",
+                        {
+                                "lineHeight": "20px",
+                                "letterSpacing": "0.01em",
+                                "fontWeight": "600"
+                        }
+                ]
+        }
+},
+    },
+  }
+</script>
+<style>
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-surface-container-low h-full flex flex-col items-center justify-center relative overflow-hidden text-on-surface">
+<!-- Decorative Background Elements -->
+<div class="absolute inset-0 w-full h-full pointer-events-none overflow-hidden z-0">
+<div class="absolute -top-1/4 -right-1/4 w-[800px] h-[800px] rounded-full bg-secondary-fixed/40 blur-[120px]"></div>
+<div class="absolute -bottom-1/4 -left-1/4 w-[600px] h-[600px] rounded-full bg-tertiary-fixed/30 blur-[100px]"></div>
+<!-- Animated Cloud/Landscape Shapes -->
+<svg class="absolute bottom-0 w-full text-surface-container opacity-50" preserveaspectratio="none" viewbox="0 0 1440 320">
+<path d="M0,160L48,176C96,192,192,224,288,213.3C384,203,480,149,576,149.3C672,149,768,203,864,224C960,245,1056,235,1152,213.3C1248,192,1344,160,1392,144L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z" fill="currentColor" fill-opacity="1"></path>
+</svg>
+</div>
+<!-- Main Content Canvas -->
+<main class="relative z-10 w-full max-w-md px-container-margin flex flex-col items-center text-center">
+<!-- Illustration Area -->
+<div class="w-64 h-64 mb-xl relative">
+<div class="absolute inset-0 rounded-full bg-secondary-fixed-dim opacity-20 animate-pulse" style="animation-duration: 4s;"></div>
+<img class="w-full h-full object-contain relative z-10 drop-shadow-[0_12px_40px_rgba(0,107,95,0.15)] rounded-full" data-alt="A soft, minimalist digital illustration of a peaceful natural landscape, perhaps a solitary tree on a rolling hill under a gentle sky. The style is modern, approachable, and vector-like, using warm pastel tones, primarily soft lavender, peach, and off-white. The aesthetic aligns with a premium corporate tech app—calming, sophisticated, and encouraging, without feeling like a childish error state." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC7PVzMqfHvShDmmRBXftm4eGFOFx2O7mgbhZJsJW5UVTDAHbrDPzEyc0CIy-q9JLbtYNTpqfHhCpdFD8FRxWaPOtAh2r31ZO2FPUfMQHeBW2prVXXFPNQdcl6oJN6inRUdcFDLLaB6pyFnsxheNK-IPwLrf3whhjwbPT5CJUnH4UuyXQVCVkjTDx632MmkZAmswk3JNX4ndlc6-HADnLZw9EQ56qxE5pG7-eFJIjaFIc1gH3TaBNY"/>
+</div>
+<!-- Typography -->
+<h1 class="font-display-lg text-display-lg text-on-surface mb-sm tracking-tight">You're offline</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant mb-xl max-w-sm mx-auto">
+            Unlimited offline practice is still available. Continue learning without a connection.
+        </p>
+<!-- CTA -->
+<button class="w-full h-[56px] rounded-lg bg-primary text-on-primary font-label-md text-label-md flex items-center justify-center gap-xs shadow-[0px_8px_30px_rgba(0,107,95,0.15)] hover:bg-primary-container hover:text-on-primary-container active:scale-95 transition-all duration-200">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">record_voice_over</span>
+            Start Offline Practice
+        </button>
+<button class="mt-md font-label-md text-label-md text-primary hover:text-primary-container transition-colors">
+            Check Connection Settings
+        </button>
+</main>
+</body></html>

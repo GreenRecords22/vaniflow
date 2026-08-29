@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>VaniFlow - Session Summary</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Manrope:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+                "on-secondary-fixed": "#00201c",
+                "on-error": "#ffffff",
+                "secondary-fixed-dim": "#a1d0c6",
+                "background": "#f5fbf8",
+                "primary": "#006b5f",
+                "inverse-primary": "#53dbc7",
+                "surface": "#f5fbf8",
+                "surface-bright": "#f5fbf8",
+                "on-secondary": "#ffffff",
+                "tertiary-fixed": "#ffddb3",
+                "on-tertiary-fixed-variant": "#633f00",
+                "on-secondary-fixed-variant": "#204e47",
+                "on-surface-variant": "#3c4946",
+                "on-primary-container": "#006156",
+                "primary-fixed-dim": "#53dbc7",
+                "on-tertiary-fixed": "#291800",
+                "surface-container-high": "#e4e9e7",
+                "surface-container": "#eaefec",
+                "surface-container-low": "#eff5f2",
+                "on-tertiary-container": "#774e00",
+                "surface-variant": "#dee4e1",
+                "surface-tint": "#006b5f",
+                "inverse-on-surface": "#ecf2ef",
+                "on-primary": "#ffffff",
+                "secondary": "#39665f",
+                "on-secondary-container": "#406c65",
+                "on-primary-fixed-variant": "#005047",
+                "surface-dim": "#d6dbd9",
+                "inverse-surface": "#2c3230",
+                "on-primary-fixed": "#00201c",
+                "secondary-fixed": "#bcece2",
+                "error": "#ba1a1a",
+                "on-error-container": "#93000a",
+                "outline": "#6c7a76",
+                "on-tertiary": "#ffffff",
+                "on-background": "#171d1b",
+                "error-container": "#ffdad6",
+                "secondary-container": "#bcece2",
+                "tertiary-container": "#ffc169",
+                "primary-container": "#5ae1cc",
+                "primary-fixed": "#74f8e3",
+                "tertiary-fixed-dim": "#f9bb64",
+                "tertiary": "#825500",
+                "surface-container-lowest": "#ffffff",
+                "outline-variant": "#bbcac5",
+                "surface-container-highest": "#dee4e1",
+                "on-surface": "#171d1b"
+        },
+        "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+        },
+        "spacing": {
+                "container-margin": "20px",
+                "md": "24px",
+                "xs": "8px",
+                "gutter": "16px",
+                "lg": "32px",
+                "base": "4px",
+                "sm": "16px",
+                "xl": "48px"
+        },
+        "fontFamily": {
+                "body-lg": [
+                        "Inter"
+                ],
+                "headline-lg": [
+                        "Manrope"
+                ],
+                "label-md": [
+                        "Inter"
+                ],
+                "label-sm": [
+                        "Inter"
+                ],
+                "body-md": [
+                        "Inter"
+                ],
+                "headline-md": [
+                        "Manrope"
+                ],
+                "headline-lg-mobile": [
+                        "Manrope"
+                ],
+                "display-lg": [
+                        "Manrope"
+                ]
+        },
+        "fontSize": {
+                "body-lg": [
+                        "18px",
+                        {
+                                "lineHeight": "28px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "headline-lg": [
+                        "32px",
+                        {
+                                "lineHeight": "40px",
+                                "letterSpacing": "-0.01em",
+                                "fontWeight": "700"
+                        }
+                ],
+                "label-md": [
+                        "14px",
+                        {
+                                "lineHeight": "20px",
+                                "letterSpacing": "0.01em",
+                                "fontWeight": "600"
+                        }
+                ],
+                "label-sm": [
+                        "12px",
+                        {
+                                "lineHeight": "16px",
+                                "fontWeight": "500"
+                        }
+                ],
+                "body-md": [
+                        "16px",
+                        {
+                                "lineHeight": "24px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "headline-md": [
+                        "24px",
+                        {
+                                "lineHeight": "32px",
+                                "fontWeight": "600"
+                        }
+                ],
+                "headline-lg-mobile": [
+                        "28px",
+                        {
+                                "lineHeight": "36px",
+                                "fontWeight": "700"
+                        }
+                ],
+                "display-lg": [
+                        "48px",
+                        {
+                                "lineHeight": "56px",
+                                "letterSpacing": "-0.02em",
+                                "fontWeight": "800"
+                        }
+                ]
+        }
+},
+    },
+  }
+</script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1;
+        }
+        
+        .circular-progress {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: conic-gradient(var(--tw-gradient-stops));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+        }
+        
+        .circular-progress::before {
+            content: "";
+            position: absolute;
+            inset: 8px;
+            border-radius: 50%;
+            background-color: white;
+        }
+        
+        .ambient-shadow-1 {
+            box-shadow: 0px 4px 20px rgba(0, 107, 95, 0.05);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen flex flex-col antialiased">
+<!-- TopAppBar (Transactional - Nav hidden, but keep brand/close) -->
+<header class="w-full top-0 sticky bg-background dark:bg-background z-40">
+<div class="flex justify-between items-center px-container-margin py-sm w-full max-w-[1140px] mx-auto">
+<!-- Brand -->
+<div class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed">
+                VaniFlow
+            </div>
+<!-- Close Action (Implies departure from main flow) -->
+<button class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-variant text-on-surface-variant hover:opacity-80 transition-opacity">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-grow flex flex-col items-center justify-start px-container-margin py-lg w-full max-w-[1140px] mx-auto">
+<!-- Header Section -->
+<div class="text-center mb-lg w-full">
+<div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary-fixed-dim text-primary mb-md">
+<span class="material-symbols-outlined text-display-lg fill" data-icon="celebration" data-weight="fill">celebration</span>
+</div>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg text-primary mb-xs">Great conversation! 🎉</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant">You're getting better.</p>
+</div>
+<!-- Stats Bento Grid -->
+<div class="grid grid-cols-2 md:grid-cols-5 gap-sm w-full max-w-4xl mb-lg">
+<!-- Speaking Time Card -->
+<div class="bg-surface-container-lowest rounded-xl ambient-shadow-1 border border-outline-variant/30 p-sm flex flex-col items-center text-center col-span-2 md:col-span-1">
+<h3 class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-xs">Speaking Time</h3>
+<div class="circular-progress from-primary to-primary-container mb-xs" style="background: conic-gradient(#006b5f 100%, #dee4e1 0);">
+<div class="relative z-10 flex flex-col items-center">
+<span class="font-headline-md text-headline-md text-primary">5m</span>
+</div>
+</div>
+</div>
+<!-- Fluency Card -->
+<div class="bg-surface-container-lowest rounded-xl ambient-shadow-1 border border-outline-variant/30 p-sm flex flex-col items-center text-center">
+<h3 class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-xs">Fluency</h3>
+<div class="circular-progress from-primary to-primary-container mb-xs" style="background: conic-gradient(#006b5f 85%, #dee4e1 0);">
+<div class="relative z-10 flex flex-col items-center">
+<span class="font-headline-md text-headline-md text-primary">85%</span>
+</div>
+</div>
+</div>
+<!-- Grammar Card -->
+<div class="bg-surface-container-lowest rounded-xl ambient-shadow-1 border border-outline-variant/30 p-sm flex flex-col items-center text-center">
+<h3 class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-xs">Grammar</h3>
+<div class="circular-progress from-primary to-primary-container mb-xs" style="background: conic-gradient(#006b5f 70%, #dee4e1 0);">
+<div class="relative z-10 flex flex-col items-center">
+<span class="font-headline-md text-headline-md text-primary">70%</span>
+</div>
+</div>
+</div>
+<!-- Pronunciation Card -->
+<div class="bg-surface-container-lowest rounded-xl ambient-shadow-1 border border-outline-variant/30 p-sm flex flex-col items-center text-center">
+<h3 class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-xs">Pronunciation</h3>
+<div class="circular-progress from-primary to-primary-container mb-xs" style="background: conic-gradient(#006b5f 92%, #dee4e1 0);">
+<div class="relative z-10 flex flex-col items-center">
+<span class="font-headline-md text-headline-md text-primary">92%</span>
+</div>
+</div>
+</div>
+<!-- Vocabulary Card -->
+<div class="bg-surface-container-lowest rounded-xl ambient-shadow-1 border border-outline-variant/30 p-sm flex flex-col items-center text-center">
+<h3 class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-xs">Vocabulary</h3>
+<div class="circular-progress from-primary to-primary-container mb-xs" style="background: conic-gradient(#006b5f 78%, #dee4e1 0);">
+<div class="relative z-10 flex flex-col items-center">
+<span class="font-headline-md text-headline-md text-primary">78%</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Feedback Highlights -->
+<div class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-md mb-lg">
+<!-- Strongest Area -->
+<div class="bg-surface-container-lowest rounded-xl ambient-shadow-1 border border-outline-variant/30 p-md flex items-start">
+<div class="w-12 h-12 rounded-full bg-primary-fixed text-primary flex items-center justify-center mr-sm shrink-0">
+<span class="material-symbols-outlined" data-icon="star">star</span>
+</div>
+<div>
+<h4 class="font-label-md text-label-md text-on-surface-variant mb-xs">Your strongest area</h4>
+<p class="font-headline-md text-headline-md text-on-background">Vocabulary</p>
+<p class="font-body-md text-body-md text-outline mt-xs">You used varied and precise phrases.</p>
+</div>
+</div>
+<!-- Improve Next -->
+<div class="bg-surface-container-lowest rounded-xl ambient-shadow-1 border border-outline-variant/30 p-md flex flex-col">
+<div class="flex items-start mb-sm">
+<div class="w-12 h-12 rounded-full bg-secondary-fixed text-secondary flex items-center justify-center mr-sm shrink-0">
+<span class="material-symbols-outlined" data-icon="trending_up">trending_up</span>
+</div>
+<div>
+<h4 class="font-label-md text-label-md text-on-surface-variant mb-xs">Focus next</h4>
+<p class="font-headline-md text-headline-md text-on-background">Past tense</p>
+<p class="font-body-md text-body-md text-outline mt-xs">You often use present tense when talking about past events.</p>
+</div>
+</div>
+<button class="w-full rounded-lg bg-surface-variant text-on-surface-variant font-label-md text-label-md py-2 px-4 hover:bg-surface-dim transition-colors mt-auto flex items-center justify-center gap-xs">
+<span class="material-symbols-outlined text-sm" data-icon="bolt">bolt</span>
+    Practice past tense for 5 minutes
+</button>
+</div>
+</div>
+<!-- Actions -->
+<div class="flex flex-col w-full max-w-md gap-sm mt-auto">
+<button class="h-[56px] w-full rounded-xl bg-primary text-on-primary font-label-md text-label-md flex items-center justify-center gap-xs hover:opacity-90 active:scale-95 transition-all">
+<span class="material-symbols-outlined" data-icon="replay">replay</span>
+                Practice Again
+            </button>
+<button class="h-[56px] w-full rounded-xl bg-secondary-fixed/30 text-primary font-label-md text-label-md flex items-center justify-center gap-xs hover:bg-secondary-fixed/50 active:scale-95 transition-all">
+                Back to Home
+            </button>
+</div>
+</main>
+<!-- Suppressed Bottom Navigation & FAB (Linear/Transactional Success Screen intent) -->
+</body></html>

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>LingoPro AI - Onboarding</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Manrope:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">tailwind.config = {darkMode: "class", theme: {extend: {colors: {"error-container": "#ffdad6", "on-secondary": "#ffffff", tertiary: "#825500", "on-error-container": "#93000a", "on-error": "#ffffff", "surface-dim": "#d6dbd9", "surface-container-highest": "#dee4e1", "surface-bright": "#f5fbf8", "on-tertiary-fixed": "#291800", "surface-container-high": "#e4e9e7", "secondary-container": "#bcece2", "surface-container-lowest": "#ffffff", "tertiary-container": "#ffc169", "surface-variant": "#dee4e1", "on-primary": "#ffffff", "on-tertiary-container": "#774e00", "outline-variant": "#bbcac5", "on-tertiary-fixed-variant": "#633f00", "primary-fixed-dim": "#53dbc7", background: "#f5fbf8", "tertiary-fixed-dim": "#f9bb64", "on-secondary-fixed": "#00201c", outline: "#6c7a76", "secondary-fixed-dim": "#a1d0c6", "primary-container": "#5ae1cc", "on-secondary-fixed-variant": "#204e47", "on-tertiary": "#ffffff", surface: "#f5fbf8", "primary-fixed": "#74f8e3", "on-secondary-container": "#406c65", "on-surface-variant": "#3c4946", "surface-tint": "#006b5f", primary: "#006b5f", "on-background": "#171d1b", "inverse-surface": "#2c3230", "inverse-on-surface": "#ecf2ef", "tertiary-fixed": "#ffddb3", "secondary-fixed": "#bcece2", "surface-container": "#eaefec", "on-primary-fixed": "#00201c", "surface-container-low": "#eff5f2", error: "#ba1a1a", "inverse-primary": "#53dbc7", "on-surface": "#171d1b", "on-primary-fixed-variant": "#005047", secondary: "#39665f", "on-primary-container": "#006156"}, borderRadius: {DEFAULT: "0.25rem", lg: "0.5rem", xl: "0.75rem", full: "9999px"}, spacing: {sm: "16px", lg: "32px", gutter: "16px", xl: "48px", "container-margin": "20px", xs: "8px", md: "24px", base: "4px"}, fontFamily: {"label-md": ["Inter"], "label-sm": ["Inter"], "display-lg": ["Manrope"], "body-md": ["Inter"], "headline-md": ["Manrope"], "headline-lg-mobile": ["Manrope"], "body-lg": ["Inter"], "headline-lg": ["Manrope"]}, fontSize: {"label-md": ["14px", {lineHeight: "20px", letterSpacing: "0.01em", fontWeight: "600"}], "label-sm": ["12px", {lineHeight: "16px", fontWeight: "500"}], "display-lg": ["48px", {lineHeight: "56px", letterSpacing: "-0.02em", fontWeight: "800"}], "body-md": ["16px", {lineHeight: "24px", fontWeight: "400"}], "headline-md": ["24px", {lineHeight: "32px", fontWeight: "600"}], "headline-lg-mobile": ["28px", {lineHeight: "36px", fontWeight: "700"}], "body-lg": ["18px", {lineHeight: "28px", fontWeight: "400"}], "headline-lg": ["32px", {lineHeight: "40px", letterSpacing: "-0.01em", fontWeight: "700"}]}}}};</script>
+<style>
+        /* Custom styles for specific effects not easily achievable with standard Tailwind */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+        
+        .ambient-shadow {
+            box-shadow: 0px 12px 40px rgba(79, 70, 229, 0.08);
+        }
+
+        .blob-bg {
+            position: absolute;
+            width: 150vw;
+            height: 150vw;
+            background: radial-gradient(circle, rgba(233,221,255,1) 0%, rgba(252,248,255,0) 70%);
+            top: -20%;
+            left: -25%;
+            z-index: -1;
+            opacity: 0.8;
+        }
+        
+        .blob-bg-2 {
+            position: absolute;
+            width: 120vw;
+            height: 120vw;
+            background: radial-gradient(circle, rgba(255,218,214,0.6) 0%, rgba(252,248,255,0) 70%);
+            bottom: -10%;
+            right: -20%;
+            z-index: -1;
+            opacity: 0.6;
+        }
+
+        .fade-in-up {
+            animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .fade-in-up-delayed {
+            animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen flex flex-col font-body-md overflow-hidden relative selection:bg-primary-container selection:text-on-primary-container">
+<!-- Ambient Background -->
+<div class="blob-bg"></div>
+<div class="blob-bg-2"></div>
+<!-- Main Container -->
+<main class="flex-1 flex flex-col justify-between px-container-margin py-xl relative z-10 w-full max-w-[480px] mx-auto md:justify-center md:gap-xl h-screen">
+<!-- Top Section: Image & Decor -->
+<div class="flex-1 flex flex-col items-center justify-center fade-in-up relative mt-lg">
+<!-- Progress Indicator (Pagination) -->
+<div class="absolute top-0 w-full flex justify-center gap-xs mb-lg">
+<div class="h-2 w-8 bg-primary rounded-full"></div>
+<div class="h-2 w-2 bg-surface-variant rounded-full transition-all duration-300"></div>
+<div class="h-2 w-2 bg-surface-variant rounded-full transition-all duration-300"></div>
+</div>
+<!-- Hero Image Container (Glassmorphism Frame) -->
+<div class="relative w-full max-w-[320px] aspect-[4/5] rounded-[24px] p-xs glass-card ambient-shadow mt-lg">
+<div class="w-full h-full rounded-[20px] overflow-hidden bg-surface-container-low relative">
+<img alt="Friendly AI Character" class="w-full h-full object-cover" data-alt="A highly detailed portrait of a friendly, approachable AI character with a warm smile. The character has a modern, slightly stylized look suitable for a premium language learning app. The lighting is soft and high-key, creating a bright, inviting atmosphere. The color palette incorporates deep indigo, soft violet, and warm off-white tones, perfectly matching a modern corporate aesthetic. The background is a subtle, out-of-focus abstract gradient." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAbfvQ2YkL2St62FhAgUlDq3Odgv__x_n3FUoNgLiCYD5RV-4KOJMk91DL000cgjbkT2Rk8nRQFAOTXX-0v1wmr6nykKkfD9Gg0-FHfWocSddjPHQv6MPxTLj4FDhQqCBono8liUp1fwa6TR6M4TFgmq7K5ffEA7rrmgP-cwl_g3oltyKcStZD3KWZ9ex7eheuoNf8GfPh0oKPtOgCUUu-kTClJQ8BDzDNNJqX6WYxX4p8BHdvBh6Q"/>
+<!-- Decorative Floating Element -->
+<div class="absolute -bottom-md -right-md w-[80px] h-[80px] bg-secondary-container rounded-full flex items-center justify-center shadow-lg transform rotate-12 z-20">
+<span class="material-symbols-outlined text-on-primary text-[32px]" style="font-variation-settings: 'FILL' 1;">
+                            record_voice_over
+                        </span>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Section: Text & Actions -->
+<div class="flex flex-col gap-lg pb-lg fade-in-up-delayed bg-surface/60 backdrop-blur-md -mx-container-margin px-container-margin pt-xl rounded-t-[32px] border-t border-outline-variant/20 shadow-[0px_-8px_30px_rgba(79,70,229,0.03)] mt-auto md:bg-transparent md:border-none md:shadow-none md:pt-0">
+<!-- Typography -->
+<div class="text-center flex flex-col gap-sm">
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg text-on-background">
+                    Speak English with confidence.
+                </h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant px-sm">
+                    Practice with AI characters who talk naturally.
+                </p>
+</div>
+<!-- Call to Actions -->
+<div class="flex flex-col gap-sm w-full pt-sm">
+<button class="w-full h-[56px] rounded-[20px] bg-primary text-on-primary font-label-md text-label-md flex items-center justify-center gap-xs shadow-[0px_4px_20px_rgba(79,70,229,0.2)] hover:bg-surface-tint active:scale-95 transition-all duration-200">
+                    Continue
+                    <span class="material-symbols-outlined text-[20px]">
+                        arrow_forward
+                    </span>
+</button>
+<button class="w-full h-[56px] rounded-[20px] bg-secondary/10 text-primary font-label-md text-label-md flex items-center justify-center hover:bg-secondary/20 active:scale-95 transition-all duration-200">
+                    Skip
+                </button>
+</div>
+</div>
+</main>
+<!-- Suppressed Navigations as per instructions (Transactional intent) -->
+</body></html>

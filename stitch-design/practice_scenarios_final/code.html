@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>VaniFlow - Scenarios</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Manrope:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+                "on-error": "#ffffff",
+                "on-secondary": "#ffffff",
+                "on-background": "#171d1b",
+                "on-surface-variant": "#3c4946",
+                "on-tertiary": "#ffffff",
+                "inverse-primary": "#53dbc7",
+                "tertiary-fixed-dim": "#f9bb64",
+                "on-secondary-fixed": "#00201c",
+                "surface-container-highest": "#dee4e1",
+                "tertiary-container": "#ffc169",
+                "on-primary-fixed-variant": "#005047",
+                "surface-bright": "#f5fbf8",
+                "on-primary-container": "#006156",
+                "background": "#f5fbf8",
+                "on-error-container": "#93000a",
+                "inverse-surface": "#2c3230",
+                "on-secondary-fixed-variant": "#204e47",
+                "inverse-on-surface": "#ecf2ef",
+                "surface-container-high": "#e4e9e7",
+                "surface": "#f5fbf8",
+                "surface-container-lowest": "#ffffff",
+                "tertiary-fixed": "#ffddb3",
+                "primary-container": "#5ae1cc",
+                "surface-container-low": "#eff5f2",
+                "on-tertiary-fixed-variant": "#633f00",
+                "on-tertiary-fixed": "#291800",
+                "on-primary-fixed": "#00201c",
+                "primary": "#006b5f",
+                "surface-container": "#eaefec",
+                "on-secondary-container": "#406c65",
+                "secondary-fixed-dim": "#a1d0c6",
+                "secondary-container": "#bcece2",
+                "error": "#ba1a1a",
+                "on-primary": "#ffffff",
+                "primary-fixed-dim": "#53dbc7",
+                "outline-variant": "#bbcac5",
+                "secondary-fixed": "#bcece2",
+                "surface-tint": "#006b5f",
+                "surface-dim": "#d6dbd9",
+                "tertiary": "#825500",
+                "on-surface": "#171d1b",
+                "secondary": "#39665f",
+                "on-tertiary-container": "#774e00",
+                "outline": "#6c7a76",
+                "primary-fixed": "#74f8e3",
+                "surface-variant": "#dee4e1",
+                "error-container": "#ffdad6"
+        },
+        "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+        },
+        "spacing": {
+                "gutter": "16px",
+                "sm": "16px",
+                "container-margin": "20px",
+                "base": "4px",
+                "xl": "48px",
+                "md": "24px",
+                "xs": "8px",
+                "lg": "32px"
+        },
+        "fontFamily": {
+                "display-lg": [
+                        "Manrope"
+                ],
+                "body-md": [
+                        "Inter"
+                ],
+                "headline-lg": [
+                        "Manrope"
+                ],
+                "headline-lg-mobile": [
+                        "Manrope"
+                ],
+                "headline-md": [
+                        "Manrope"
+                ],
+                "body-lg": [
+                        "Inter"
+                ],
+                "label-sm": [
+                        "Inter"
+                ],
+                "label-md": [
+                        "Inter"
+                ]
+        },
+        "fontSize": {
+                "display-lg": [
+                        "48px",
+                        {
+                                "lineHeight": "56px",
+                                "letterSpacing": "-0.02em",
+                                "fontWeight": "800"
+                        }
+                ],
+                "body-md": [
+                        "16px",
+                        {
+                                "lineHeight": "24px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "headline-lg": [
+                        "32px",
+                        {
+                                "lineHeight": "40px",
+                                "letterSpacing": "-0.01em",
+                                "fontWeight": "700"
+                        }
+                ],
+                "headline-lg-mobile": [
+                        "28px",
+                        {
+                                "lineHeight": "36px",
+                                "fontWeight": "700"
+                        }
+                ],
+                "headline-md": [
+                        "24px",
+                        {
+                                "lineHeight": "32px",
+                                "fontWeight": "600"
+                        }
+                ],
+                "body-lg": [
+                        "18px",
+                        {
+                                "lineHeight": "28px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "label-sm": [
+                        "12px",
+                        {
+                                "lineHeight": "16px",
+                                "fontWeight": "500"
+                        }
+                ],
+                "label-md": [
+                        "14px",
+                        {
+                                "lineHeight": "20px",
+                                "letterSpacing": "0.01em",
+                                "fontWeight": "600"
+                        }
+                ]
+        }
+},
+    },
+  }
+</script>
+<style>
+        body {
+            -webkit-tap-highlight-color: transparent;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.filled {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background text-on-background min-h-screen pb-[90px]">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky z-40 bg-background flex justify-between items-center px-container-margin py-sm max-w-[1140px] mx-auto flat no shadows">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full overflow-hidden shrink-0 border border-outline-variant/30">
+<img alt="User profile photo" class="w-full h-full object-cover" data-alt="A close-up professional headshot of an individual with a warm, encouraging smile, serving as a user profile photo. The lighting is soft and high-key, fitting a premium, modern light-mode app aesthetic. The background is a very subtle, light gradient to maintain focus on the subject. The style conveys intelligence and approachability." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB0Cn3l7H71lS71IqsQNSoKfa99kRSfHt7eIX-qp81nFE8-AlQktFZv0iamGvpFHs4O26mZLXa6w-1vMnjXvS907ArAfeTSIWcxFqeNzU1mqSV0XXhZ39sso4gXOjXvYpSgMDdSwwZTzG0mhEXbejjE2tN5Z_B1PMUq-dPPM4r-r7QeyrTemD-HSgggXnt5Ja1dGurHGaSysnDrZ-_SE59scNU7BQgne658ci_PxDg4G0V-4AkoZwA"/>
+</div>
+<h1 class="font-headline-md text-headline-md font-bold text-primary">VaniFlow</h1>
+</div>
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:opacity-80 transition-opacity active:scale-95 transition-transform text-primary">
+<span class="material-symbols-outlined text-[24px]">settings</span>
+</button>
+</header>
+<main class="w-full max-w-[1140px] mx-auto px-container-margin mt-md">
+<section class="mb-lg">
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-background mb-xs">Select Scenario</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Choose a real-world situation to practice your speaking skills.</p>
+</section>
+<!-- Categories Filter (Horizontal Scroll) -->
+<div class="flex gap-xs overflow-x-auto pb-sm mb-sm -mx-container-margin px-container-margin no-scrollbar snap-x">
+<button class="shrink-0 px-md py-xs rounded-full bg-primary text-on-primary font-label-md text-label-md transition-transform active:scale-95 snap-start">All</button>
+<button class="shrink-0 px-md py-xs rounded-full bg-surface-container-highest text-on-surface-variant font-label-md text-label-md hover:bg-surface-variant transition-colors active:scale-95 snap-start">Daily Life</button>
+<button class="shrink-0 px-md py-xs rounded-full bg-surface-container-highest text-on-surface-variant font-label-md text-label-md hover:bg-surface-variant transition-colors active:scale-95 snap-start">Travel</button>
+<button class="shrink-0 px-md py-xs rounded-full bg-surface-container-highest text-on-surface-variant font-label-md text-label-md hover:bg-surface-variant transition-colors active:scale-95 snap-start">Work</button>
+<button class="shrink-0 px-md py-xs rounded-full bg-surface-container-highest text-on-surface-variant font-label-md text-label-md hover:bg-surface-variant transition-colors active:scale-95 snap-start">Interview</button>
+</div>
+<!-- Scenarios Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-sm">
+<!-- Card 1: Order Coffee -->
+<div class="bg-surface-container-lowest rounded-[20px] p-sm border border-outline-variant/30 shadow-[0px_4px_20px_rgba(0,107,95,0.05)] hover:shadow-[0px_8px_30px_rgba(0,107,95,0.08)] transition-all cursor-pointer group active:scale-[0.98]">
+<div class="flex items-start justify-between mb-md">
+<div class="w-12 h-12 rounded-[16px] bg-secondary-container/20 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-[28px]">local_cafe</span>
+</div>
+<span class="px-xs py-1 rounded-md bg-surface-variant text-on-surface-variant font-label-sm text-label-sm">Beginner</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-background mb-1">Order Coffee</h3>
+<p class="font-body-md text-body-md text-on-surface-variant mb-md line-clamp-2">Practice ordering your favorite drink and making small talk with the barista.</p>
+<div class="flex items-center gap-2 text-on-surface-variant/80 font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]">schedule</span>
+<span>3 min</span>
+<span class="w-1 h-1 rounded-full bg-outline-variant mx-1"></span>
+<span>Daily Life</span>
+</div>
+</div>
+<!-- Card 2: Airport Check-in -->
+<div class="bg-surface-container-lowest rounded-[20px] p-sm border border-outline-variant/30 shadow-[0px_4px_20px_rgba(0,107,95,0.05)] hover:shadow-[0px_8px_30px_rgba(0,107,95,0.08)] transition-all cursor-pointer group active:scale-[0.98]">
+<div class="flex items-start justify-between mb-md">
+<div class="w-12 h-12 rounded-[16px] bg-tertiary-container/10 flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined text-[28px]">flight_takeoff</span>
+</div>
+<span class="px-xs py-1 rounded-md bg-surface-variant text-on-surface-variant font-label-sm text-label-sm">Intermediate</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-background mb-1">Airport Check-in</h3>
+<p class="font-body-md text-body-md text-on-surface-variant mb-md line-clamp-2">Navigate the check-in counter, baggage drop, and common questions.</p>
+<div class="flex items-center gap-2 text-on-surface-variant/80 font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]">schedule</span>
+<span>5 min</span>
+<span class="w-1 h-1 rounded-full bg-outline-variant mx-1"></span>
+<span>Travel</span>
+</div>
+</div>
+<!-- Card 3: Job Interview -->
+<div class="bg-surface-container-lowest rounded-[20px] p-sm border border-outline-variant/30 shadow-[0px_4px_20px_rgba(0,107,95,0.05)] hover:shadow-[0px_8px_30px_rgba(0,107,95,0.08)] transition-all cursor-pointer group active:scale-[0.98]">
+<div class="flex items-start justify-between mb-md">
+<div class="w-12 h-12 rounded-[16px] bg-primary-container/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[28px]">work</span>
+</div>
+<span class="px-xs py-1 rounded-md bg-error-container/50 text-on-error-container font-label-sm text-label-sm">Advanced</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-background mb-1">Job Interview</h3>
+<p class="font-body-md text-body-md text-on-surface-variant mb-md line-clamp-2">Answer common interview questions and discuss your professional experience.</p>
+<div class="flex items-center gap-2 text-on-surface-variant/80 font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]">schedule</span>
+<span>10 min</span>
+<span class="w-1 h-1 rounded-full bg-outline-variant mx-1"></span>
+<span>Interview</span>
+</div>
+</div>
+<!-- Card 4: Project Update -->
+<div class="bg-surface-container-lowest rounded-[20px] p-sm border border-outline-variant/30 shadow-[0px_4px_20px_rgba(0,107,95,0.05)] hover:shadow-[0px_8px_30px_rgba(0,107,95,0.08)] transition-all cursor-pointer group active:scale-[0.98]">
+<div class="flex items-start justify-between mb-md">
+<div class="w-12 h-12 rounded-[16px] bg-secondary-container/20 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-[28px]">groups</span>
+</div>
+<span class="px-xs py-1 rounded-md bg-surface-variant text-on-surface-variant font-label-sm text-label-sm">Intermediate</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-background mb-1">Project Standup</h3>
+<p class="font-body-md text-body-md text-on-surface-variant mb-md line-clamp-2">Give a clear update on your tasks and discuss blockers with the team.</p>
+<div class="flex items-center gap-2 text-on-surface-variant/80 font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]">schedule</span>
+<span>4 min</span>
+<span class="w-1 h-1 rounded-full bg-outline-variant mx-1"></span>
+<span>Work</span>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full flex justify-around items-center px-4 pt-3 pb-6 bg-surface/80 backdrop-blur-lg z-50 rounded-t-[20px] border-t-0 shadow-[0px_-4px_20px_rgba(0,107,95,0.05)]">
+<button class="flex flex-col items-center justify-center text-on-surface-variant/40 hover:text-primary transition-colors active:scale-90 transition-transform duration-200">
+<span class="material-symbols-outlined mb-1">home</span>
+<span class="font-label-sm text-label-sm">Home</span>
+</button>
+<button class="flex flex-col items-center justify-center text-primary font-semibold hover:text-primary transition-colors active:scale-90 transition-transform duration-200">
+<span class="material-symbols-outlined filled mb-1">record_voice_over</span>
+<span class="font-label-sm text-label-sm">Practice</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant/40 hover:text-primary transition-colors active:scale-90 transition-transform duration-200">
+<span class="material-symbols-outlined mb-1">bar_chart</span>
+<span class="font-label-sm text-label-sm">Progress</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant/40 hover:text-primary transition-colors active:scale-90 transition-transform duration-200">
+<span class="material-symbols-outlined mb-1">person</span>
+<span class="font-label-sm text-label-sm">Profile</span>
+</button>
+</nav>
+</body></html>
