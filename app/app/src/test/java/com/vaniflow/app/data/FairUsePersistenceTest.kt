@@ -27,7 +27,7 @@ class FairUsePersistenceTest {
 
     @Test
     fun `accumulated speaking time persists across tracker restart on same day`() = runTest {
-        val testDate = "2026-08-29"
+        val testDate = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
         val savedEntity = DailyUsageEntity(
             date = testDate,
             speakingSeconds = 3600L, // 60 minutes
@@ -62,8 +62,8 @@ class FairUsePersistenceTest {
 
     @Test
     fun `date rollover resets usage counters to zero on new day`() = runTest {
-        val previousDay = "2026-08-28"
-        val newDay = "2026-08-29"
+        val previousDay = "2020-01-01"
+        val newDay = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
 
         val previousEntity = DailyUsageEntity(
             date = previousDay,
@@ -88,5 +88,77 @@ class FairUsePersistenceTest {
         assertEquals(0, tracker.getDailyMinutes())
         assertEquals(0, tracker.getTotalRequests())
         assertFalse(tracker.isFairUseExceeded())
+    }
+
+    @Test
+    fun `exact boundary check 89 min 59 sec is not exceeded but 90 min 00 sec is exceeded`() = runTest {
+        val testDate = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
+        val tracker = DailyConversationUsageTracker(dailyUsageRepository)
+        tracker.loadPersistedUsage(testDate)
+
+        // 89 minutes 59 seconds = 5399 seconds
+        tracker.addSpeakingDurationSeconds(5399)
+        assertEquals(89, tracker.getDailyMinutes())
+        assertFalse("89:59 must NOT exceed fair-use limit", tracker.isFairUseExceeded())
+
+        // Add 1 more second = 5400 seconds = exactly 90:00
+        tracker.addSpeakingDurationSeconds(1)
+        assertEquals(90, tracker.getDailyMinutes())
+        assertTrue("90:00 MUST exceed fair-use limit", tracker.isFairUseExceeded())
+
+        // Simulate app restart at 90:00
+        val entityAt90 = DailyUsageEntity(
+            date = testDate,
+            speakingSeconds = 5400L,
+            inputTokens = 2000L,
+            outputTokens = 4000L,
+            totalRequests = 25,
+            cacheHits = 5,
+            savedTokens = 500L
+        )
+        coEvery { dailyUsageRepository.getUsageForDate(testDate) } returns entityAt90
+
+        val restartedTracker = DailyConversationUsageTracker(dailyUsageRepository)
+        restartedTracker.loadPersistedUsage(testDate)
+        assertEquals(90, restartedTracker.getDailyMinutes())
+        assertTrue("Restart at 90:00 MUST STILL exceed fair-use limit", restartedTracker.isFairUseExceeded())
+    }
+
+    @Test
+    fun `reaching 90 minutes enforces local or fallback routing and bypasses remote cloud AI`() = runTest {
+        val testDate = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
+        val entityAt90 = DailyUsageEntity(
+            date = testDate,
+            speakingSeconds = 5400L,
+            inputTokens = 2000L,
+            outputTokens = 4000L,
+            totalRequests = 25,
+            cacheHits = 5,
+            savedTokens = 500L
+        )
+        coEvery { dailyUsageRepository.getUsageForDate(testDate) } returns entityAt90
+
+        val tracker = DailyConversationUsageTracker(dailyUsageRepository)
+        tracker.loadPersistedUsage(testDate)
+        assertTrue(tracker.isFairUseExceeded())
+
+        // Verify SmartResponseDecisionEngine decision
+        val memoryManager = com.vaniflow.app.engine.ai.memory.ConversationMemoryManager()
+        val cache = com.vaniflow.app.engine.ai.cache.DefaultAIResponseCache(mockk(relaxed = true))
+        val providerRegistry = com.vaniflow.app.engine.ai.provider.ProviderRegistry(emptyList())
+
+        val decisionEngine = com.vaniflow.app.engine.ai.routing.SmartResponseDecisionEngine(
+            memoryManager = memoryManager,
+            responseCache = cache,
+            usageTracker = tracker,
+            providerRegistry = providerRegistry
+        )
+
+        val decision = decisionEngine.evaluateDecision("Tell me about Jaipur", "raya", "general")
+        assertTrue(
+            "Fair use limit reached must force LOCAL_AI_REQUIRED or FALLBACK_REQUIRED",
+            decision.type == com.vaniflow.app.engine.ai.routing.ResponseDecisionType.LOCAL_AI_REQUIRED ||
+                decision.type == com.vaniflow.app.engine.ai.routing.ResponseDecisionType.FALLBACK_REQUIRED
+        )
     }
 }

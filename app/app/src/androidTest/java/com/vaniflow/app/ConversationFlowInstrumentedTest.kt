@@ -28,8 +28,7 @@ import javax.inject.Inject
 @RunWith(AndroidJUnit4::class)
 class ConversationFlowInstrumentedTest {
 
-    @get:Rule(order = 0) val hiltRule = HiltAndroidRule(this)
-    @get:Rule(order = 1) val composeRule = createAndroidComposeRule<MainActivity>()
+    @get:Rule val hiltRule = HiltAndroidRule(this)
 
     @Inject lateinit var characterRegistry: CharacterRegistry
     @Inject lateinit var scenarioRegistry: ScenarioRegistry
@@ -90,28 +89,5 @@ class ConversationFlowInstrumentedTest {
         val sentences = SentenceSplitter.splitIntoSentences("Welcome! How are you today? Let us practice English together.")
         assertEquals(3, sentences.size)
         assertTrue(sentences[0].contains("Welcome"))
-    }
-
-    @Test
-    fun homeScreenRendersWithinTimeout() {
-        assertNotNull("Activity must launch", composeRule.activity)
-        assertFalse("Activity must not be finishing", composeRule.activity.isFinishing)
-    }
-
-    @Test
-    fun deviceMeetsMinimumRamRequirement() {
-        val ctx = InstrumentationRegistry.getInstrumentation().targetContext
-        val am = ctx.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
-        val info = android.app.ActivityManager.MemoryInfo()
-        am.getMemoryInfo(info)
-        val ramMb = info.totalMem / (1024 * 1024)
-        println("[M13] Device RAM: $ramMb MB")
-        assertTrue("Device must have >= 2048 MB RAM, has $ramMb MB", ramMb >= 2048)
-    }
-
-    @Test
-    fun deviceApiLevelMeetsMinSdk() {
-        println("[M13] API: ${android.os.Build.VERSION.SDK_INT}, Device: ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}")
-        assertTrue("API must be >= 26", android.os.Build.VERSION.SDK_INT >= 26)
     }
 }

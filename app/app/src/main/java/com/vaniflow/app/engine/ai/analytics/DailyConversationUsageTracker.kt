@@ -49,19 +49,19 @@ class DailyConversationUsageTracker @Inject constructor(
 
     private var activeDate: String = getTodayDateString()
 
-    init {
-        dailyUsageRepository?.let { repo ->
-            scope.launch {
-                try {
-                    val today = getTodayDateString()
-                    activeDate = today
-                    val usage = repo.getUsageForDate(today)
-                    if (usage != null) {
-                        applyPersistedUsage(usage)
-                    }
-                } catch (_: Exception) {}
+    private val initJob = scope.launch {
+        try {
+            val today = getTodayDateString()
+            activeDate = today
+            val usage = dailyUsageRepository.getUsageForDate(today)
+            if (usage != null) {
+                applyPersistedUsage(usage)
             }
-        }
+        } catch (_: Exception) {}
+    }
+
+    suspend fun ensureLoaded() {
+        initJob.join()
     }
 
     private fun getTodayDateString(): String {

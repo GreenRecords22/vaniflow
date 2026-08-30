@@ -106,15 +106,26 @@ class SmartResponseDecisionEngine @Inject constructor(
             }
         }
 
-        // 5. 90-Minute Daily Policy Evaluation
+        // 5. 90-Minute Daily Policy Evaluation (Fair-Use Protection)
         if (usageTracker.isFairUseExceeded()) {
-            val localProvider = providerRegistry.allProviders.firstOrNull { it.providerId == "local_vaniflow" && it.isAvailable() }
-            if (localProvider != null) {
-                return ResponseDecision(
+            val localProvider = providerRegistry.allProviders.firstOrNull {
+                (it.providerId == "local_vaniflow" || it.priority == 3) && it.isAvailable()
+            }
+            return if (localProvider != null) {
+                ResponseDecision(
                     type = ResponseDecisionType.LOCAL_AI_REQUIRED,
                     reason = "Daily 90-minute limit reached; transitioning to local on-device SLM",
                     isSensitive = isSensitive,
                     selectedProvider = localProvider
+                )
+            } else {
+                val fallback = providerRegistry.allProviders.firstOrNull { it.priority >= 4 || it.providerId == "fallback_contextual" }
+                    ?: providerRegistry.allProviders.lastOrNull()
+                ResponseDecision(
+                    type = ResponseDecisionType.FALLBACK_REQUIRED,
+                    reason = "Daily 90-minute cloud limit reached; transitioning to conversational fallback",
+                    isSensitive = isSensitive,
+                    selectedProvider = fallback
                 )
             }
         }

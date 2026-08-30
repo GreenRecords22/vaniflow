@@ -1,4 +1,4 @@
-﻿package com.vaniflow.app.engine.learning.tutor
+package com.vaniflow.app.engine.learning.tutor
 
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
@@ -50,5 +50,20 @@ data class LearnerProfile(
         val weakList = conceptsNeedingPractice.take(3).joinToString(", ")
         val weakText = if (weakList.isNotBlank()) "Needs practice on: $weakList." else "Grammar flow is solid."
         return "Learner Level: ${estimatedLevel.displayLabel}. Speaking Confidence: ${speakingConfidenceScore.toInt()}%. $weakText"
+    }
+
+    fun copyProfile(): LearnerProfile {
+        val copy = LearnerProfile(
+            estimatedLevel = this.estimatedLevel,
+            speakingConfidenceScore = this.speakingConfidenceScore,
+            totalUtterances = this.totalUtterances,
+            correctionsDelivered = this.correctionsDelivered,
+            successfulRetries = this.successfulRetries
+        )
+        copy.commonMistakes.putAll(this.commonMistakes)
+        copy.masteredConcepts.addAll(this.masteredConcepts)
+        copy.conceptsNeedingPractice.addAll(this.conceptsNeedingPractice)
+        copy.recentCorrections.addAll(this.recentCorrections)
+        return copy
     }
 }

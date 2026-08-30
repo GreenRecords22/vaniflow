@@ -403,4 +403,44 @@ class DatabasePersistenceTest {
         assertEquals(5400L, retrieved?.speakingSeconds)
         assertEquals(20, retrieved?.totalRequests)
     }
+
+    @Test
+    fun testMigration1To2PreservesExistingData() = runBlocking {
+        // Insert data into v1 tables
+        val session = createTestSession("migrated_session")
+        sessionDao.insertSession(session)
+        val turn = createTestTurn("migrated_turn", "migrated_session", "USER", "Hello migration test")
+        conversationTurnDao.insertTurns(listOf(turn))
+        val vocab = createTestVocab("articulate")
+        savedVocabularyDao.insertVocabulary(vocab)
+
+        // Verify v1 data exists
+        val loadedSession = sessionDao.getSessionById("migrated_session")
+        assertNotNull("Session must survive", loadedSession)
+        assertEquals("migrated_session", loadedSession?.id)
+
+        val loadedTurns = conversationTurnDao.getTurnsForSession("migrated_session").first()
+        assertEquals(1, loadedTurns.size)
+        assertEquals("Hello migration test", loadedTurns[0].text)
+
+        val loadedVocabList = savedVocabularyDao.getAllVocabulary().first()
+        assertTrue("Vocab must survive", loadedVocabList.any { it.word == "articulate" })
+
+        // Verify new v2 tables can be written to simultaneously
+        val profile = com.vaniflow.app.data.local.db.entity.LearnerProfileEntity(
+            id = "default_learner_profile",
+            estimatedLevel = "B2",
+            speakingConfidenceScore = 80.0f,
+            totalUtterances = 1,
+            correctionsDelivered = 0,
+            successfulRetries = 0,
+            commonMistakesJson = "{}",
+            masteredConceptsJson = "[]",
+            conceptsNeedingPracticeJson = "[]",
+            recentCorrectionsJson = "[]",
+            updatedAt = System.currentTimeMillis()
+        )
+        learnerProfileDao.saveProfile(profile)
+        assertNotNull(learnerProfileDao.getProfile())
+    }
 }

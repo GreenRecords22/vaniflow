@@ -175,17 +175,6 @@ class ConversationEngine private constructor(
     var activeRetry: ActiveRetryContext? = null
         private set
 
-    init {
-        learnerProfileRepository?.let { repo ->
-            engineScope.launch(Dispatchers.IO) {
-                try {
-                    val profile = repo.getLearnerProfile()
-                    learningMemoryManager.setProfile(profile)
-                } catch (_: Exception) {}
-            }
-        }
-    }
-
     fun startSession(character: Character, scenario: Scenario, sessionId: String = UUID.randomUUID().toString()) {
         activeGenerationJob?.cancel()
         currentSessionId = sessionId
@@ -295,6 +284,9 @@ class ConversationEngine private constructor(
             _state.value = ConversationState.LISTENING
             return
         }
+
+        learningMemoryManager.ensureLoaded()
+        usageTracker.ensureLoaded()
 
         isInterrupted.set(false)
         _errorMessage.value = null

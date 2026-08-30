@@ -119,4 +119,44 @@ class LearnerProfilePersistenceTest {
         assertEquals(1, loadedProfile.recentCorrections.size)
         assertEquals("good at", loadedProfile.recentCorrections.first().suggestedText)
     }
+
+    @Test
+    fun `startup profile load race is prevented when user speaks immediately on launch`() = runTest {
+        val entity = LearnerProfileEntity(
+            id = "default_learner_profile",
+            estimatedLevel = "B1",
+            speakingConfidenceScore = 75.0f,
+            totalUtterances = 10,
+            correctionsDelivered = 2,
+            successfulRetries = 2,
+            commonMistakesJson = "{\"past_buyed\":1}",
+            masteredConceptsJson = "[\"past_buyed\"]",
+            conceptsNeedingPracticeJson = "[\"tense\"]",
+            recentCorrectionsJson = "[]",
+            updatedAt = System.currentTimeMillis()
+        )
+        coEvery { learnerProfileDao.getProfile() } returns entity
+
+        val memoryManager = com.vaniflow.app.engine.learning.tutor.LearningMemoryManager(repository)
+
+        // Ensure loaded is called when first utterance is processed
+        memoryManager.ensureLoaded()
+
+        // Verify loaded profile was adopted
+        assertEquals(EstimatedLevel.B1, memoryManager.profile.estimatedLevel)
+        assertEquals(75.0f, memoryManager.profile.speakingConfidenceScore, 0.01f)
+        assertEquals(10, memoryManager.profile.totalUtterances)
+
+        // Process utterance
+        val decision = com.vaniflow.app.engine.learning.tutor.TutorCorrectionDecision(
+            hasError = false,
+            primarySeverity = CorrectionSeverity.STYLE,
+            timing = com.vaniflow.app.engine.learning.tutor.CorrectionTiming.NO_CORRECTION,
+            detectedErrors = emptyList()
+        )
+        memoryManager.onUtteranceAnalyzed(decision)
+
+        // Verify total utterances incremented to 11 (not reset to 1)
+        assertEquals(11, memoryManager.profile.totalUtterances)
+    }
 }

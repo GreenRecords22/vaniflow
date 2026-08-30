@@ -77,7 +77,7 @@ data class DailyUsageEntity(
     val inputTokens: Long,
     val outputTokens: Long,
     val totalRequests: Int,
-    val cacheHits: Int,
-    val savedTokens: Long,
+    val cacheHits: Int = 0,
+    val savedTokens: Long = 0L,
     val updatedAt: Long = System.currentTimeMillis()
 )

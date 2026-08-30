@@ -29,66 +29,74 @@ class LearningMemoryManager @Inject constructor(
     var profile: LearnerProfile = LearnerProfile()
         private set
 
-    init {
-        learnerProfileRepository?.let { repo ->
-            scope.launch {
-                try {
-                    val loaded = repo.getLearnerProfile()
-                    profile = loaded
-                } catch (_: Exception) {}
+    private val initJob = scope.launch {
+        try {
+            val loaded = learnerProfileRepository.getLearnerProfile()
+            synchronized(this@LearningMemoryManager) {
+                profile = loaded
             }
-        }
+        } catch (_: Exception) {}
+    }
+
+    suspend fun ensureLoaded(): LearnerProfile {
+        initJob.join()
+        return profile
     }
 
     suspend fun loadPersistedProfile(): LearnerProfile {
-        learnerProfileRepository?.let { repo ->
-            val loaded = repo.getLearnerProfile()
+        val loaded = learnerProfileRepository.getLearnerProfile()
+        synchronized(this) {
             profile = loaded
         }
         return profile
     }
 
     fun setProfile(newProfile: LearnerProfile) {
-        profile = newProfile
+        synchronized(this) {
+            profile = newProfile
+        }
         persistProfileAsync()
     }
 
     fun onUtteranceAnalyzed(decision: TutorCorrectionDecision) {
-        profile.totalUtterances++
-        if (decision.hasError) {
-            for (error in decision.detectedErrors) {
-                profile.recordMistake(error.ruleIdentifier, error.category)
-                if (profile.recentCorrections.size >= 10) {
-                    profile.recentCorrections.removeAt(0)
+        synchronized(this) {
+            profile.totalUtterances++
+            if (decision.hasError) {
+                for (error in decision.detectedErrors) {
+                    profile.recordMistake(error.ruleIdentifier, error.category)
+                    if (profile.recentCorrections.size >= 10) {
+                        profile.recentCorrections.removeAt(0)
+                    }
+                    profile.recentCorrections.add(error)
                 }
-                profile.recentCorrections.add(error)
+                if (decision.timing != CorrectionTiming.NO_CORRECTION) {
+                    profile.correctionsDelivered++
+                }
+            } else {
+                // Smooth natural confidence boost for clean speaking
+                profile.speakingConfidenceScore = (profile.speakingConfidenceScore + 0.5f).coerceAtMost(100f)
             }
-            if (decision.timing != CorrectionTiming.NO_CORRECTION) {
-                profile.correctionsDelivered++
-            }
-        } else {
-            // Smooth natural confidence boost for clean speaking
-            profile.speakingConfidenceScore = (profile.speakingConfidenceScore + 0.5f).coerceAtMost(100f)
         }
         persistProfileAsync()
     }
 
     fun onRetryEvaluated(evaluation: RetryEvaluation) {
-        if (evaluation.isFixed && evaluation.originalError != null) {
-            profile.recordSuccessfulRetry(evaluation.originalError.ruleIdentifier, evaluation.originalError.category)
-        } else if (evaluation.isPartiallyFixed) {
-            profile.speakingConfidenceScore = (profile.speakingConfidenceScore + 0.8f).coerceAtMost(100f)
+        synchronized(this) {
+            if (evaluation.isFixed && evaluation.originalError != null) {
+                profile.recordSuccessfulRetry(evaluation.originalError.ruleIdentifier, evaluation.originalError.category)
+            } else if (evaluation.isPartiallyFixed) {
+                profile.speakingConfidenceScore = (profile.speakingConfidenceScore + 0.8f).coerceAtMost(100f)
+            }
         }
         persistProfileAsync()
     }
 
     private fun persistProfileAsync() {
-        learnerProfileRepository?.let { repo ->
-            scope.launch {
-                try {
-                    repo.saveLearnerProfile(profile)
-                } catch (_: Exception) {}
-            }
+        val snapshot = synchronized(this) { profile.copyProfile() }
+        scope.launch {
+            try {
+                learnerProfileRepository.saveLearnerProfile(snapshot)
+            } catch (_: Exception) {}
         }
     }
 

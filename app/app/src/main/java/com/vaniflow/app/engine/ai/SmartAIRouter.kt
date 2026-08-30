@@ -123,7 +123,13 @@ class SmartAIRouter @Inject constructor(
         }
 
         // Multi-Provider Cascade: Remote Primary -> Remote Secondary -> Local VaniFlow -> Context Fallback
-        val providers = providerRegistry.allProviders.sortedBy { it.priority }
+        val providers = if (usageTracker.isFairUseExceeded() || decision.type == ResponseDecisionType.LOCAL_AI_REQUIRED || decision.type == ResponseDecisionType.FALLBACK_REQUIRED) {
+            providerRegistry.allProviders.filter { it.priority >= 3 }.sortedBy { it.priority }
+        } else if (decision.selectedProvider != null) {
+            listOf(decision.selectedProvider) + providerRegistry.allProviders.filter { it != decision.selectedProvider }.sortedBy { it.priority }
+        } else {
+            providerRegistry.allProviders.sortedBy { it.priority }
+        }
         for (provider in providers) {
             if (provider.isAvailable()) {
                 val result = provider.generateResponse(memoryPrompt, rollingHistory, userInput)
@@ -192,8 +198,14 @@ class SmartAIRouter @Inject constructor(
         }
 
         // Multi-Provider Streaming Cascade
-        val providers = providerRegistry.allProviders.sortedBy { it.priority }
-        for (provider in providers) {
+        val streamingProviders = if (usageTracker.isFairUseExceeded() || decision.type == ResponseDecisionType.LOCAL_AI_REQUIRED || decision.type == ResponseDecisionType.FALLBACK_REQUIRED) {
+            providerRegistry.allProviders.filter { it.priority >= 3 }.sortedBy { it.priority }
+        } else if (decision.selectedProvider != null) {
+            listOf(decision.selectedProvider) + providerRegistry.allProviders.filter { it != decision.selectedProvider }.sortedBy { it.priority }
+        } else {
+            providerRegistry.allProviders.sortedBy { it.priority }
+        }
+        for (provider in streamingProviders) {
             if (provider.isAvailable()) {
                 var anyToken = false
                 val collected = StringBuilder()
