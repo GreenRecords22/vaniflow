@@ -188,6 +188,7 @@ class ConversationEngine private constructor(
 
         // Inform the AI router which character/scenario is active (for cache scoping + resets).
         aiEngine.setActiveContext(character.id, scenario.id)
+        learningMemoryManager.startSession(scenario, currentSessionId)
 
         // Create opening turn from scenario initial message
         val greeting = scenario.initialMessage.replace("Alex", character.name)
@@ -206,6 +207,16 @@ class ConversationEngine private constructor(
     fun getCurrentSessionId(): String = currentSessionId
 
     fun getLearnerProfile(): LearnerProfile = learningMemoryManager.profile
+
+    fun getActiveGoals(): List<com.vaniflow.app.engine.learning.tutor.model.LearningGoal> = learningMemoryManager.activeGoals.toList()
+
+    fun getDifficultyLevel(): com.vaniflow.app.engine.learning.tutor.model.DifficultyLevel = learningMemoryManager.currentDifficulty
+
+    fun getSessionSummary(): com.vaniflow.app.engine.learning.tutor.model.SessionLearningSummary {
+        val durationMs = if (sessionStartTimeMs > 0) System.currentTimeMillis() - sessionStartTimeMs else 60_000L
+        val userTurnsCount = _turns.value.count { it.speaker == ConversationTurn.Speaker.USER }
+        return learningMemoryManager.getSessionSummary(currentSessionId, durationMs, userTurnsCount)
+    }
 
     /**
      * Removes a trailing empty AI turn (created as a streaming placeholder) so that
@@ -307,7 +318,7 @@ class ConversationEngine private constructor(
                 retryCtx.originalUtterance,
                 userText
             )
-            learningMemoryManager.onRetryEvaluated(evaluation)
+            learningMemoryManager.onRetryEvaluated(evaluation, sessionId = currentSessionId)
 
             val userTurn = ConversationTurn(
                 id = UUID.randomUUID().toString(),
@@ -395,7 +406,8 @@ class ConversationEngine private constructor(
         // -------------------------------------------------------------
         // 1. Analyze with EnglishCorrectionEngine & update LearningMemoryManager
         val decision = correctionEngine.analyzeUtterance(userText)
-        learningMemoryManager.onUtteranceAnalyzed(decision)
+        val shouldSpokenCorrect = learningMemoryManager.shouldDeliverSpokenCorrection(decision)
+        learningMemoryManager.onUtteranceAnalyzed(decision, sessionId = currentSessionId, userUtterance = userText)
 
         val correction: Correction? = if (decision.hasError && decision.detectedErrors.isNotEmpty()) {
             val primary = decision.detectedErrors.first()
@@ -433,8 +445,8 @@ class ConversationEngine private constructor(
         _turns.value = _turns.value + userTurn
         pruneEmptyAiTurns()
 
-        // 3. If important error requires retry, deliver spoken correction & enter WAITING_FOR_RETRY
-        if (decision.hasError && decision.shouldRequestRetry && decision.primarySeverity >= CorrectionSeverity.IMPORTANT && decision.detectedErrors.isNotEmpty()) {
+        // 3. Intelligent Correction Decision: Check if error warrants spoken interruption + retry
+        if (shouldSpokenCorrect && decision.detectedErrors.isNotEmpty()) {
             val primaryErr = decision.detectedErrors.first()
             val correctedText = decision.correctedSentence ?: primaryErr.suggestedText
             val spokenCorrection = "${primaryErr.explanation} Try saying: \"$correctedText\""
@@ -615,23 +627,27 @@ class ConversationEngine private constructor(
         // Record daily speaking time in usage tracker
         usageTracker.addSpeakingDurationSeconds(elapsedSeconds)
 
-        val totalCorrections = _turns.value.count { it.correction != null }
-        val userTurnsCount = _turns.value.count { it.speaker == ConversationTurn.Speaker.USER }.coerceAtLeast(1)
-
-        val calculatedGrammar = (100 - (totalCorrections * 15)).coerceIn(60, 95)
-        val calculatedFluency = (75 + (userTurnsCount * 3)).coerceIn(70, 96)
-        val calculatedPronunciation = 92
-        val calculatedVocabulary = (78 + (userTurnsCount * 2)).coerceIn(70, 94)
+        val summary = getSessionSummary()
+        val calculatedGrammar = summary.grammarScore
+        val calculatedFluency = summary.fluencyScore
+        val calculatedPronunciation = summary.pronunciationScore
+        val calculatedVocabulary = summary.vocabularyScore
+        val strongest = if (calculatedPronunciation >= calculatedFluency) "Pronunciation" else "Fluency"
+        val focus = if (summary.conceptsNeedingPractice.isNotEmpty()) {
+            summary.conceptsNeedingPractice.first().replace('_', ' ').replaceFirstChar { it.uppercaseChar() }
+        } else {
+            "Natural Phrasing"
+        }
 
         val score = SessionScore(
-            speakingTimeMinutes = elapsedMinutes,
+            speakingTimeMinutes = summary.speakingMinutes,
             fluencyScore = calculatedFluency,
             grammarScore = calculatedGrammar,
             pronunciationScore = calculatedPronunciation,
             vocabularyScore = calculatedVocabulary,
-            strongestArea = if (calculatedPronunciation >= calculatedFluency) "Pronunciation" else "Fluency",
-            focusNext = if (totalCorrections > 0) "Past Tense & Prepositions" else "Advanced Phrasing",
-            focusNextExplanation = "Focus on using appropriate prepositions and past tense consistency when sharing stories."
+            strongestArea = strongest,
+            focusNext = focus,
+            focusNextExplanation = "Focus on practicing $focus consistency in upcoming speaking practice."
         )
 
         // Persist session to Room database

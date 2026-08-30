@@ -5,19 +5,25 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.vaniflow.app.data.local.db.dao.AICacheDao
+import com.vaniflow.app.data.local.db.dao.ConceptMasteryDao
 import com.vaniflow.app.data.local.db.dao.ConversationTurnDao
 import com.vaniflow.app.data.local.db.dao.DailyUsageDao
 import com.vaniflow.app.data.local.db.dao.GuestProfileDao
 import com.vaniflow.app.data.local.db.dao.LearnerProfileDao
+import com.vaniflow.app.data.local.db.dao.LearningEventDao
 import com.vaniflow.app.data.local.db.dao.SavedVocabularyDao
 import com.vaniflow.app.data.local.db.dao.SessionDao
+import com.vaniflow.app.data.local.db.dao.VocabularyMemoryDao
 import com.vaniflow.app.data.local.db.entity.AICacheEntity
+import com.vaniflow.app.data.local.db.entity.ConceptMasteryEntity
 import com.vaniflow.app.data.local.db.entity.ConversationTurnEntity
 import com.vaniflow.app.data.local.db.entity.DailyUsageEntity
 import com.vaniflow.app.data.local.db.entity.GuestProfileEntity
 import com.vaniflow.app.data.local.db.entity.LearnerProfileEntity
+import com.vaniflow.app.data.local.db.entity.LearningEventEntity
 import com.vaniflow.app.data.local.db.entity.SavedVocabularyEntity
 import com.vaniflow.app.data.local.db.entity.SessionEntity
+import com.vaniflow.app.data.local.db.entity.VocabularyMemoryEntity
 
 @Database(
     entities = [
@@ -27,9 +33,12 @@ import com.vaniflow.app.data.local.db.entity.SessionEntity
         SavedVocabularyEntity::class,
         AICacheEntity::class,
         LearnerProfileEntity::class,
-        DailyUsageEntity::class
+        DailyUsageEntity::class,
+        LearningEventEntity::class,
+        ConceptMasteryEntity::class,
+        VocabularyMemoryEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class VaniFlowDatabase : RoomDatabase() {
@@ -40,6 +49,9 @@ abstract class VaniFlowDatabase : RoomDatabase() {
     abstract fun aiCacheDao(): AICacheDao
     abstract fun learnerProfileDao(): LearnerProfileDao
     abstract fun dailyUsageDao(): DailyUsageDao
+    abstract fun learningEventDao(): LearningEventDao
+    abstract fun conceptMasteryDao(): ConceptMasteryDao
+    abstract fun vocabularyMemoryDao(): VocabularyMemoryDao
 
     companion object {
         val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -74,6 +86,64 @@ abstract class VaniFlowDatabase : RoomDatabase() {
                         `savedTokens` INTEGER NOT NULL,
                         `updatedAt` INTEGER NOT NULL,
                         PRIMARY KEY(`date`)
+                    )
+                    """.trimIndent()
+                )
+            }
+        }
+
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `learning_events` (
+                        `id` TEXT NOT NULL,
+                        `type` TEXT NOT NULL,
+                        `conceptId` TEXT NOT NULL,
+                        `category` TEXT NOT NULL,
+                        `severity` TEXT NOT NULL,
+                        `originalUtterance` TEXT,
+                        `correctedForm` TEXT,
+                        `isSuccess` INTEGER NOT NULL,
+                        `sessionId` TEXT,
+                        `confidenceImpact` REAL NOT NULL,
+                        `timestampEpochMs` INTEGER NOT NULL,
+                        PRIMARY KEY(`id`)
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `concept_mastery` (
+                        `conceptId` TEXT NOT NULL,
+                        `category` TEXT NOT NULL,
+                        `masteryScore` INTEGER NOT NULL,
+                        `attemptCount` INTEGER NOT NULL,
+                        `successCount` INTEGER NOT NULL,
+                        `failureCount` INTEGER NOT NULL,
+                        `consecutiveSuccesses` INTEGER NOT NULL,
+                        `consecutiveFailures` INTEGER NOT NULL,
+                        `lastPracticedEpochMs` INTEGER NOT NULL,
+                        `lastSuccessEpochMs` INTEGER NOT NULL,
+                        `practicePriority` INTEGER NOT NULL,
+                        PRIMARY KEY(`conceptId`)
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `vocabulary_memory` (
+                        `id` TEXT NOT NULL,
+                        `wordOrPhrase` TEXT NOT NULL,
+                        `phonetic` TEXT NOT NULL,
+                        `partOfSpeech` TEXT NOT NULL,
+                        `meaning` TEXT NOT NULL,
+                        `exampleSentence` TEXT NOT NULL,
+                        `familiarityScore` INTEGER NOT NULL,
+                        `usageCount` INTEGER NOT NULL,
+                        `lastUsedEpochMs` INTEGER NOT NULL,
+                        `sourceScenarioId` TEXT,
+                        PRIMARY KEY(`id`)
                     )
                     """.trimIndent()
                 )

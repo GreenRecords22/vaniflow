@@ -81,3 +81,47 @@ data class DailyUsageEntity(
     val savedTokens: Long = 0L,
     val updatedAt: Long = System.currentTimeMillis()
 )
+
+@Entity(tableName = "learning_events")
+data class LearningEventEntity(
+    @PrimaryKey val id: String,
+    val type: String,
+    val conceptId: String,
+    val category: String,
+    val severity: String,
+    val originalUtterance: String?,
+    val correctedForm: String?,
+    val isSuccess: Boolean,
+    val sessionId: String?,
+    val confidenceImpact: Float,
+    val timestampEpochMs: Long
+)
+
+@Entity(tableName = "concept_mastery")
+data class ConceptMasteryEntity(
+    @PrimaryKey val conceptId: String,
+    val category: String,
+    val masteryScore: Int,
+    val attemptCount: Int,
+    val successCount: Int,
+    val failureCount: Int,
+    val consecutiveSuccesses: Int,
+    val consecutiveFailures: Int,
+    val lastPracticedEpochMs: Long,
+    val lastSuccessEpochMs: Long,
+    val practicePriority: Int
+)
+
+@Entity(tableName = "vocabulary_memory")
+data class VocabularyMemoryEntity(
+    @PrimaryKey val id: String,
+    val wordOrPhrase: String,
+    val phonetic: String,
+    val partOfSpeech: String,
+    val meaning: String,
+    val exampleSentence: String,
+    val familiarityScore: Int,
+    val usageCount: Int,
+    val lastUsedEpochMs: Long,
+    val sourceScenarioId: String?
+)

@@ -4,12 +4,15 @@ import android.content.Context
 import androidx.room.Room
 import com.vaniflow.app.data.local.db.VaniFlowDatabase
 import com.vaniflow.app.data.local.db.dao.AICacheDao
+import com.vaniflow.app.data.local.db.dao.ConceptMasteryDao
 import com.vaniflow.app.data.local.db.dao.ConversationTurnDao
 import com.vaniflow.app.data.local.db.dao.DailyUsageDao
 import com.vaniflow.app.data.local.db.dao.GuestProfileDao
 import com.vaniflow.app.data.local.db.dao.LearnerProfileDao
+import com.vaniflow.app.data.local.db.dao.LearningEventDao
 import com.vaniflow.app.data.local.db.dao.SavedVocabularyDao
 import com.vaniflow.app.data.local.db.dao.SessionDao
+import com.vaniflow.app.data.local.db.dao.VocabularyMemoryDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -29,7 +32,7 @@ object DatabaseModule {
             VaniFlowDatabase::class.java,
             "vaniflow.db"
         )
-            .addMigrations(VaniFlowDatabase.MIGRATION_1_2)
+            .addMigrations(VaniFlowDatabase.MIGRATION_1_2, VaniFlowDatabase.MIGRATION_2_3)
             .fallbackToDestructiveMigration()
             .build()
     }
@@ -67,5 +70,20 @@ object DatabaseModule {
     @Provides
     fun provideDailyUsageDao(database: VaniFlowDatabase): DailyUsageDao {
         return database.dailyUsageDao()
+    }
+
+    @Provides
+    fun provideLearningEventDao(database: VaniFlowDatabase): LearningEventDao {
+        return database.learningEventDao()
+    }
+
+    @Provides
+    fun provideConceptMasteryDao(database: VaniFlowDatabase): ConceptMasteryDao {
+        return database.conceptMasteryDao()
+    }
+
+    @Provides
+    fun provideVocabularyMemoryDao(database: VaniFlowDatabase): VocabularyMemoryDao {
+        return database.vocabularyMemoryDao()
     }
 }

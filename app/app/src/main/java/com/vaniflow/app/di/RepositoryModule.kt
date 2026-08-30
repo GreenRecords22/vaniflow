@@ -39,4 +39,16 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindDailyUsageRepository(defaultDailyUsageRepository: com.vaniflow.app.data.repository.DefaultDailyUsageRepository): com.vaniflow.app.domain.repository.DailyUsageRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindLearningEventRepository(defaultLearningEventRepository: com.vaniflow.app.data.repository.DefaultLearningEventRepository): com.vaniflow.app.domain.repository.LearningEventRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindConceptMasteryRepository(defaultConceptMasteryRepository: com.vaniflow.app.data.repository.DefaultConceptMasteryRepository): com.vaniflow.app.domain.repository.ConceptMasteryRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindVocabularyMemoryRepository(defaultVocabularyMemoryRepository: com.vaniflow.app.data.repository.DefaultVocabularyMemoryRepository): com.vaniflow.app.domain.repository.VocabularyMemoryRepository
 }

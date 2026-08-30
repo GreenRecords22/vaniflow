@@ -1,13 +1,13 @@
-﻿package com.vaniflow.app.engine.learning.tutor
+package com.vaniflow.app.engine.learning.tutor
 
 /**
  * Severity level of a detected English learning issue.
  */
-enum class CorrectionSeverity {
-    CRITICAL,    // Meaning is unclear or communication is seriously broken
-    IMPORTANT,   // Core grammar/tense/agreement error that should be learned
-    MINOR,       // Small slip (missing article, minor preposition) not hurting meaning
-    STYLE        // Grammatically acceptable, but more natural spoken phrasing exists
+enum class CorrectionSeverity(val level: Int) {
+    STYLE(1),        // Grammatically acceptable, but more natural spoken phrasing exists
+    MINOR(2),        // Small slip (missing article, minor preposition) not hurting meaning
+    IMPORTANT(3),    // Core grammar/tense/agreement error that should be learned
+    CRITICAL(4)      // Meaning is unclear or communication is seriously broken
 }
 
 /**

@@ -46,6 +46,9 @@ class DatabasePersistenceTest {
     @Inject lateinit var guestProfileDao: com.vaniflow.app.data.local.db.dao.GuestProfileDao
     @Inject lateinit var learnerProfileDao: com.vaniflow.app.data.local.db.dao.LearnerProfileDao
     @Inject lateinit var dailyUsageDao: com.vaniflow.app.data.local.db.dao.DailyUsageDao
+    @Inject lateinit var learningEventDao: com.vaniflow.app.data.local.db.dao.LearningEventDao
+    @Inject lateinit var conceptMasteryDao: com.vaniflow.app.data.local.db.dao.ConceptMasteryDao
+    @Inject lateinit var vocabularyMemoryDao: com.vaniflow.app.data.local.db.dao.VocabularyMemoryDao
 
     @Before
     fun setup() {
@@ -442,5 +445,71 @@ class DatabasePersistenceTest {
         )
         learnerProfileDao.saveProfile(profile)
         assertNotNull(learnerProfileDao.getProfile())
+    }
+
+    @Test
+    fun testLearningEventPersistence() = runBlocking {
+        val event = com.vaniflow.app.data.local.db.entity.LearningEventEntity(
+            id = "event_1",
+            type = "CORRECTION",
+            conceptId = "past_buyed",
+            category = "TENSE",
+            severity = "IMPORTANT",
+            originalUtterance = "Yesterday I buyed apples",
+            correctedForm = "bought",
+            isSuccess = false,
+            sessionId = "session_123",
+            confidenceImpact = -1.0f,
+            timestampEpochMs = System.currentTimeMillis()
+        )
+        learningEventDao.insertEvent(event)
+
+        val retrieved = learningEventDao.getEventsForSession("session_123")
+        assertEquals(1, retrieved.size)
+        assertEquals("past_buyed", retrieved[0].conceptId)
+        assertEquals("TENSE", retrieved[0].category)
+    }
+
+    @Test
+    fun testConceptMasteryPersistence() = runBlocking {
+        val mastery = com.vaniflow.app.data.local.db.entity.ConceptMasteryEntity(
+            conceptId = "past_buyed",
+            category = "TENSE",
+            masteryScore = 75,
+            attemptCount = 4,
+            successCount = 3,
+            failureCount = 1,
+            consecutiveSuccesses = 2,
+            consecutiveFailures = 0,
+            lastPracticedEpochMs = System.currentTimeMillis(),
+            lastSuccessEpochMs = System.currentTimeMillis(),
+            practicePriority = 35
+        )
+        conceptMasteryDao.saveMastery(mastery)
+
+        val retrieved = conceptMasteryDao.getMastery("past_buyed")
+        assertNotNull(retrieved)
+        assertEquals(75, retrieved?.masteryScore)
+        assertEquals(2, retrieved?.consecutiveSuccesses)
+    }
+
+    @Test
+    fun testVocabularyMemoryPersistence() = runBlocking {
+        val vocab = com.vaniflow.app.data.local.db.entity.VocabularyMemoryEntity(
+            id = "vocab_1",
+            wordOrPhrase = "looking forward to",
+            phonetic = "",
+            partOfSpeech = "expression",
+            meaning = "await with excitement",
+            exampleSentence = "I am looking forward to our meeting.",
+            familiarityScore = 30,
+            usageCount = 2,
+            lastUsedEpochMs = System.currentTimeMillis(),
+            sourceScenarioId = "work_meeting"
+        )
+        vocabularyMemoryDao.insertVocabularyMemory(vocab)
+
+        val needingPractice = vocabularyMemoryDao.getExpressionsNeedingPractice()
+        assertTrue(needingPractice.any { it.wordOrPhrase == "looking forward to" })
     }
 }

@@ -69,4 +69,19 @@ object TestDatabaseModule {
     fun provideDailyUsageDao(database: VaniFlowDatabase): com.vaniflow.app.data.local.db.dao.DailyUsageDao {
         return database.dailyUsageDao()
     }
+
+    @Provides
+    fun provideLearningEventDao(database: VaniFlowDatabase): com.vaniflow.app.data.local.db.dao.LearningEventDao {
+        return database.learningEventDao()
+    }
+
+    @Provides
+    fun provideConceptMasteryDao(database: VaniFlowDatabase): com.vaniflow.app.data.local.db.dao.ConceptMasteryDao {
+        return database.conceptMasteryDao()
+    }
+
+    @Provides
+    fun provideVocabularyMemoryDao(database: VaniFlowDatabase): com.vaniflow.app.data.local.db.dao.VocabularyMemoryDao {
+        return database.vocabularyMemoryDao()
+    }
 }

@@ -96,3 +96,63 @@ interface DailyUsageDao {
     @Query("DELETE FROM daily_usage")
     suspend fun deleteAllUsage()
 }
+
+@Dao
+interface LearningEventDao {
+    @Query("SELECT * FROM learning_events ORDER BY timestampEpochMs DESC")
+    fun getAllEvents(): Flow<List<com.vaniflow.app.data.local.db.entity.LearningEventEntity>>
+
+    @Query("SELECT * FROM learning_events WHERE sessionId = :sessionId ORDER BY timestampEpochMs ASC")
+    suspend fun getEventsForSession(sessionId: String): List<com.vaniflow.app.data.local.db.entity.LearningEventEntity>
+
+    @Query("SELECT * FROM learning_events WHERE conceptId = :conceptId ORDER BY timestampEpochMs DESC LIMIT 20")
+    suspend fun getRecentEventsForConcept(conceptId: String): List<com.vaniflow.app.data.local.db.entity.LearningEventEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertEvent(event: com.vaniflow.app.data.local.db.entity.LearningEventEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertEvents(events: List<com.vaniflow.app.data.local.db.entity.LearningEventEntity>)
+
+    @Query("DELETE FROM learning_events")
+    suspend fun deleteAllEvents()
+}
+
+@Dao
+interface ConceptMasteryDao {
+    @Query("SELECT * FROM concept_mastery ORDER BY practicePriority DESC")
+    fun getAllMasteryFlow(): Flow<List<com.vaniflow.app.data.local.db.entity.ConceptMasteryEntity>>
+
+    @Query("SELECT * FROM concept_mastery")
+    suspend fun getAllMastery(): List<com.vaniflow.app.data.local.db.entity.ConceptMasteryEntity>
+
+    @Query("SELECT * FROM concept_mastery WHERE conceptId = :conceptId LIMIT 1")
+    suspend fun getMastery(conceptId: String): com.vaniflow.app.data.local.db.entity.ConceptMasteryEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun saveMastery(mastery: com.vaniflow.app.data.local.db.entity.ConceptMasteryEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun saveAllMastery(list: List<com.vaniflow.app.data.local.db.entity.ConceptMasteryEntity>)
+
+    @Query("DELETE FROM concept_mastery")
+    suspend fun deleteAllMastery()
+}
+
+@Dao
+interface VocabularyMemoryDao {
+    @Query("SELECT * FROM vocabulary_memory ORDER BY lastUsedEpochMs DESC")
+    fun getAllVocabularyMemoryFlow(): Flow<List<com.vaniflow.app.data.local.db.entity.VocabularyMemoryEntity>>
+
+    @Query("SELECT * FROM vocabulary_memory ORDER BY familiarityScore ASC")
+    suspend fun getExpressionsNeedingPractice(): List<com.vaniflow.app.data.local.db.entity.VocabularyMemoryEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertVocabularyMemory(entity: com.vaniflow.app.data.local.db.entity.VocabularyMemoryEntity)
+
+    @Query("DELETE FROM vocabulary_memory WHERE id = :id")
+    suspend fun deleteVocabularyMemory(id: String)
+
+    @Query("DELETE FROM vocabulary_memory")
+    suspend fun deleteAllVocabularyMemory()
+}
