@@ -59,4 +59,14 @@ object TestDatabaseModule {
     fun provideAICacheDao(database: VaniFlowDatabase): AICacheDao {
         return database.aiCacheDao()
     }
+
+    @Provides
+    fun provideLearnerProfileDao(database: VaniFlowDatabase): com.vaniflow.app.data.local.db.dao.LearnerProfileDao {
+        return database.learnerProfileDao()
+    }
+
+    @Provides
+    fun provideDailyUsageDao(database: VaniFlowDatabase): com.vaniflow.app.data.local.db.dao.DailyUsageDao {
+        return database.dailyUsageDao()
+    }
 }

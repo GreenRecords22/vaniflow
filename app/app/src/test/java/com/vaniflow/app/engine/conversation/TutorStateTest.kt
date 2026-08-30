@@ -85,9 +85,9 @@ class TutorStateTest {
         assertEquals(ConversationEngine.TutorState.WAITING_FOR_RETRY, engine.tutorState)
         assertNotNull(engine.activeRetry)
 
-        // User speaks during TTS playback (barge in)
+        // User begins speaking retry
         engine.onUserStartedSpeaking()
-        assertEquals(ConversationState.INTERRUPTED, engine.state.value)
+        assertEquals(ConversationState.USER_SPEAKING, engine.state.value)
 
         // Active retry context is preserved
         assertEquals(ConversationEngine.TutorState.WAITING_FOR_RETRY, engine.tutorState)

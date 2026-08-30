@@ -28,9 +28,14 @@ import javax.inject.Singleton
 
 @Singleton
 class DefaultLearnerProfileRepository @Inject constructor(
-    private val learnerProfileDao: LearnerProfileDao,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val learnerProfileDao: LearnerProfileDao
 ) : LearnerProfileRepository {
+
+    private var ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+
+    constructor(learnerProfileDao: LearnerProfileDao, dispatcher: CoroutineDispatcher) : this(learnerProfileDao) {
+        this.ioDispatcher = dispatcher
+    }
 
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 

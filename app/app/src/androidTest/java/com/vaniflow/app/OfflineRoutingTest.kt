@@ -190,11 +190,10 @@ class OfflineRoutingTest {
     }
 
     @Test
-    fun modelManagerKnowsAllFiveModels() {
-        assertEquals("Must have 5 registered models", 5, modelManager.availableModels.size)
+    fun modelManagerKnowsAllRegisteredModels() {
+        assertEquals("Must have 4 registered models", 4, modelManager.availableModels.size)
         val ids = modelManager.availableModels.map { it.id }.toSet()
         assertTrue(ids.contains("stt_sherpa_zipformer_small"))
-        assertTrue(ids.contains("stt_vosk_in_small"))
         assertTrue(ids.contains("tts_piper_raya_warm"))
         assertTrue(ids.contains("llm_qwen25_05b_instruct"))
         assertTrue(ids.contains("llm_qwen25_15b_instruct"))

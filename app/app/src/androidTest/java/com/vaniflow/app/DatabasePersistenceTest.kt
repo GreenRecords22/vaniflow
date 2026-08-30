@@ -44,6 +44,8 @@ class DatabasePersistenceTest {
     @Inject lateinit var savedVocabularyDao: com.vaniflow.app.data.local.db.dao.SavedVocabularyDao
     @Inject lateinit var aiCacheDao: com.vaniflow.app.data.local.db.dao.AICacheDao
     @Inject lateinit var guestProfileDao: com.vaniflow.app.data.local.db.dao.GuestProfileDao
+    @Inject lateinit var learnerProfileDao: com.vaniflow.app.data.local.db.dao.LearnerProfileDao
+    @Inject lateinit var dailyUsageDao: com.vaniflow.app.data.local.db.dao.DailyUsageDao
 
     @Before
     fun setup() {
@@ -57,6 +59,8 @@ class DatabasePersistenceTest {
             conversationTurnDao.deleteAllTurns()
             savedVocabularyDao.deleteAllVocabulary()
             aiCacheDao.clearAll()
+            learnerProfileDao.deleteProfile()
+            dailyUsageDao.deleteAllUsage()
         }
     }
 
@@ -350,4 +354,53 @@ class DatabasePersistenceTest {
         tokensCount = 10,
         expiresAt = System.currentTimeMillis() + 7 * 24 * 60 * 60 * 1000L
     )
+
+    // --- 7. LearnerProfile & DailyUsage Real Room Persistence ---
+
+    @Test
+    fun testLearnerProfilePersistence() = runBlocking {
+        val profileEntity = com.vaniflow.app.data.local.db.entity.LearnerProfileEntity(
+            id = "default_learner_profile",
+            estimatedLevel = "B1",
+            speakingConfidenceScore = 75.0f,
+            totalUtterances = 30,
+            correctionsDelivered = 4,
+            successfulRetries = 3,
+            commonMistakesJson = "{\"past_buyed\":2}",
+            masteredConceptsJson = "[\"past_buyed\"]",
+            conceptsNeedingPracticeJson = "[\"tense\"]",
+            recentCorrectionsJson = "[]",
+            updatedAt = System.currentTimeMillis()
+        )
+
+        learnerProfileDao.saveProfile(profileEntity)
+
+        val retrieved = learnerProfileDao.getProfile()
+        assertNotNull("LearnerProfile must be persisted in Room", retrieved)
+        assertEquals("B1", retrieved?.estimatedLevel)
+        assertEquals(75.0f, retrieved?.speakingConfidenceScore ?: 0f, 0.01f)
+        assertEquals(30, retrieved?.totalUtterances)
+        assertTrue(retrieved?.commonMistakesJson?.contains("past_buyed") == true)
+    }
+
+    @Test
+    fun testDailyUsagePersistence() = runBlocking {
+        val usageEntity = com.vaniflow.app.data.local.db.entity.DailyUsageEntity(
+            date = "2026-08-29",
+            speakingSeconds = 5400L,
+            inputTokens = 1500L,
+            outputTokens = 3000L,
+            totalRequests = 20,
+            cacheHits = 5,
+            savedTokens = 750L,
+            updatedAt = System.currentTimeMillis()
+        )
+
+        dailyUsageDao.saveUsage(usageEntity)
+
+        val retrieved = dailyUsageDao.getUsageByDate("2026-08-29")
+        assertNotNull("DailyUsage must be persisted in Room", retrieved)
+        assertEquals(5400L, retrieved?.speakingSeconds)
+        assertEquals(20, retrieved?.totalRequests)
+    }
 }

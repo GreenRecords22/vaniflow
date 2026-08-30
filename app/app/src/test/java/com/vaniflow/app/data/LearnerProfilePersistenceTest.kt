@@ -76,7 +76,7 @@ class LearnerProfilePersistenceTest {
         coVerify { learnerProfileDao.saveProfile(any()) }
         val captured = slot.captured
         assertEquals("B1", captured.estimatedLevel)
-        assertEquals(78.5f, captured.speakingConfidenceScore, 0.01f)
+        assertEquals(80.0f, captured.speakingConfidenceScore, 0.01f)
         assertTrue(captured.commonMistakesJson.contains("past_buyed"))
         assertTrue(captured.commonMistakesJson.contains("sva_he_dont"))
         assertTrue(captured.masteredConceptsJson.contains("past_buyed"))

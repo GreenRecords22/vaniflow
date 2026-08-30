@@ -21,8 +21,16 @@ import javax.inject.Singleton
  */
 @Singleton
 class DailyConversationUsageTracker @Inject constructor(
-    private val dailyUsageRepository: DailyUsageRepository? = null
+    private val dailyUsageRepository: DailyUsageRepository
 ) {
+    // Test constructor
+    constructor() : this(object : DailyUsageRepository {
+        override suspend fun getUsageForDate(date: String): DailyUsageEntity? = null
+        override suspend fun saveUsage(usage: DailyUsageEntity) {}
+        override fun getAllUsage(): kotlinx.coroutines.flow.Flow<List<DailyUsageEntity>> = kotlinx.coroutines.flow.emptyFlow()
+        override suspend fun clearUsage() {}
+    })
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private val totalSpeakingSeconds = AtomicLong(0L)

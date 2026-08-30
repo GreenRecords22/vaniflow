@@ -52,18 +52,83 @@ import javax.inject.Singleton
  * and selective retry coaching.
  */
 @Singleton
-class ConversationEngine @Inject constructor(
+class ConversationEngine private constructor(
     private val aiEngine: AIEngine,
     private val ttsEngine: TTSEngine,
     private val feedbackEngine: FeedbackEngine,
-    private val correctionEngine: EnglishCorrectionEngine = EnglishCorrectionEngine(),
-    private val learningMemoryManager: LearningMemoryManager = LearningMemoryManager(),
-    private val usageTracker: DailyConversationUsageTracker = DailyConversationUsageTracker(),
-    private val sessionDao: SessionDao? = null,
-    private val conversationTurnDao: ConversationTurnDao? = null,
-    private val learnerProfileRepository: LearnerProfileRepository? = null,
-    private val dailyUsageRepository: DailyUsageRepository? = null
+    private val correctionEngine: EnglishCorrectionEngine,
+    private val learningMemoryManager: LearningMemoryManager,
+    private val usageTracker: DailyConversationUsageTracker,
+    private val sessionDao: SessionDao?,
+    private val conversationTurnDao: ConversationTurnDao?,
+    private val learnerProfileRepository: LearnerProfileRepository?,
+    private val dailyUsageRepository: DailyUsageRepository?,
+    @Suppress("UNUSED_PARAMETER") marker: Unit?
 ) {
+    @Inject
+    constructor(
+        aiEngine: AIEngine,
+        ttsEngine: TTSEngine,
+        feedbackEngine: FeedbackEngine,
+        correctionEngine: EnglishCorrectionEngine,
+        learningMemoryManager: LearningMemoryManager,
+        usageTracker: DailyConversationUsageTracker,
+        sessionDao: SessionDao,
+        conversationTurnDao: ConversationTurnDao,
+        learnerProfileRepository: LearnerProfileRepository,
+        dailyUsageRepository: DailyUsageRepository
+    ) : this(
+        aiEngine = aiEngine,
+        ttsEngine = ttsEngine,
+        feedbackEngine = feedbackEngine,
+        correctionEngine = correctionEngine,
+        learningMemoryManager = learningMemoryManager,
+        usageTracker = usageTracker,
+        sessionDao = sessionDao,
+        conversationTurnDao = conversationTurnDao,
+        learnerProfileRepository = learnerProfileRepository,
+        dailyUsageRepository = dailyUsageRepository,
+        marker = null
+    )
+
+    constructor(
+        aiEngine: AIEngine,
+        ttsEngine: TTSEngine,
+        feedbackEngine: FeedbackEngine
+    ) : this(
+        aiEngine = aiEngine,
+        ttsEngine = ttsEngine,
+        feedbackEngine = feedbackEngine,
+        correctionEngine = EnglishCorrectionEngine(),
+        learningMemoryManager = LearningMemoryManager(),
+        usageTracker = DailyConversationUsageTracker(),
+        sessionDao = null,
+        conversationTurnDao = null,
+        learnerProfileRepository = null,
+        dailyUsageRepository = null,
+        marker = null
+    )
+
+    constructor(
+        aiEngine: AIEngine,
+        ttsEngine: TTSEngine,
+        feedbackEngine: FeedbackEngine,
+        correctionEngine: EnglishCorrectionEngine,
+        learningMemoryManager: LearningMemoryManager
+    ) : this(
+        aiEngine = aiEngine,
+        ttsEngine = ttsEngine,
+        feedbackEngine = feedbackEngine,
+        correctionEngine = correctionEngine,
+        learningMemoryManager = learningMemoryManager,
+        usageTracker = DailyConversationUsageTracker(),
+        sessionDao = null,
+        conversationTurnDao = null,
+        learnerProfileRepository = null,
+        dailyUsageRepository = null,
+        marker = null
+    )
+
     enum class TutorState {
         NORMAL,
         GIVING_FEEDBACK,
@@ -344,13 +409,15 @@ class ConversationEngine @Inject constructor(
             val primary = decision.detectedErrors.first()
             Correction(
                 originalText = primary.originalText,
-                suggestedText = primary.suggestedText,
+                suggestedText = decision.correctedSentence ?: primary.suggestedText,
                 explanation = primary.explanation,
                 category = when (primary.category) {
-                    EnglishErrorCategory.TENSE, EnglishErrorCategory.GRAMMAR, EnglishErrorCategory.SUBJECT_VERB_AGREEMENT -> CorrectionCategory.GRAMMAR
-                    EnglishErrorCategory.ARTICLES, EnglishErrorCategory.PREPOSITIONS -> CorrectionCategory.PREPOSITIONS
-                    EnglishErrorCategory.NATURAL_PHRASING, EnglishErrorCategory.WORD_CHOICE, EnglishErrorCategory.WORD_ORDER -> CorrectionCategory.NATURAL_PHRASING
-                    else -> CorrectionCategory.GRAMMAR
+                    EnglishErrorCategory.TENSE, EnglishErrorCategory.GRAMMAR, EnglishErrorCategory.SUBJECT_VERB_AGREEMENT,
+                    EnglishErrorCategory.ARTICLES, EnglishErrorCategory.PREPOSITIONS, EnglishErrorCategory.SINGULAR_PLURAL -> CorrectionCategory.GRAMMAR
+                    EnglishErrorCategory.NATURAL_PHRASING, EnglishErrorCategory.WORD_CHOICE, EnglishErrorCategory.WORD_ORDER,
+                    EnglishErrorCategory.SENTENCE_CONSTRUCTION -> CorrectionCategory.NATURAL_PHRASING
+                    EnglishErrorCategory.VOCABULARY -> CorrectionCategory.VOCABULARY
+                    EnglishErrorCategory.FLUENCY_FILLER -> CorrectionCategory.FLUENCY
                 },
                 importance = when (primary.severity) {
                     CorrectionSeverity.CRITICAL, CorrectionSeverity.IMPORTANT -> FeedbackImportance.HIGH

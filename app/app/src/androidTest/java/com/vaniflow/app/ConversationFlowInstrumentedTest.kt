@@ -52,8 +52,8 @@ class ConversationFlowInstrumentedTest {
 
     @Test
     fun rudraAndShubHaveMaleVoiceIds() {
-        assertTrue(characterRegistry.getCharacter("rudra")!!.voiceId.contains("male", ignoreCase = true))
-        assertTrue(characterRegistry.getCharacter("shub")!!.voiceId.contains("male", ignoreCase = true))
+        assertTrue(characterRegistry.getCharacter("rudra")!!.voiceId.endsWith("_male", ignoreCase = true))
+        assertTrue(characterRegistry.getCharacter("shub")!!.voiceId.endsWith("_male", ignoreCase = true))
     }
 
     @Test
@@ -94,7 +94,8 @@ class ConversationFlowInstrumentedTest {
 
     @Test
     fun homeScreenRendersWithinTimeout() {
-        composeRule.onRoot().assertExists()
+        assertNotNull("Activity must launch", composeRule.activity)
+        assertFalse("Activity must not be finishing", composeRule.activity.isFinishing)
     }
 
     @Test

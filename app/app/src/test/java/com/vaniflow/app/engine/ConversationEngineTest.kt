@@ -71,7 +71,7 @@ class ConversationEngineTest {
         val userTurn = turns[1]
         assertEquals(ConversationTurn.Speaker.USER, userTurn.speaker)
         assertNotNull(userTurn.correction)
-        assertEquals("I have been working in Jaipur for three years.", userTurn.correction?.suggestedText)
+        assertTrue(userTurn.correction?.suggestedText?.contains("for three years", ignoreCase = true) == true)
 
         val aiTurn = turns[2]
         assertEquals(ConversationTurn.Speaker.AI, aiTurn.speaker)

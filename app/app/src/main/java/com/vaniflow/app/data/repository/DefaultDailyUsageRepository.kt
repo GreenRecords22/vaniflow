@@ -12,9 +12,14 @@ import javax.inject.Singleton
 
 @Singleton
 class DefaultDailyUsageRepository @Inject constructor(
-    private val dailyUsageDao: DailyUsageDao,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val dailyUsageDao: DailyUsageDao
 ) : DailyUsageRepository {
+
+    private var ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+
+    constructor(dailyUsageDao: DailyUsageDao, dispatcher: CoroutineDispatcher) : this(dailyUsageDao) {
+        this.ioDispatcher = dispatcher
+    }
 
     override suspend fun getUsageForDate(date: String): DailyUsageEntity? = withContext(ioDispatcher) {
         dailyUsageDao.getUsageByDate(date)

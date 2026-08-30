@@ -1,14 +1,20 @@
 package com.vaniflow.app.engine.ai
 
 import android.util.Log
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.vaniflow.app.engine.ai.llm.LlamaCppRuntime
 import com.vaniflow.app.engine.ai.llm.LocalLLMRuntime
 import com.vaniflow.app.engine.model.DefaultModelManager
+import dagger.hilt.android.testing.HiltAndroidRule
+import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
 import java.io.File
 
 /**
@@ -31,7 +37,17 @@ private fun ensureModelOnDevice(ctx: android.content.Context) {
  * [LlamaCppRuntime] -> llama.cpp JNI -> Qwen2.5-0.5B GGUF. Proves genuine token
  * streaming through the engine layer, not just the raw runtime. No mic/TTS needed.
  */
+@HiltAndroidTest
+@RunWith(AndroidJUnit4::class)
 class RealLocalAIEngineDeviceTest {
+
+    @get:Rule
+    val hiltRule = HiltAndroidRule(this)
+
+    @Before
+    fun setup() {
+        hiltRule.inject()
+    }
 
     private fun engine(): LocalAIEngine {
         val ctx = InstrumentationRegistry.getInstrumentation().targetContext

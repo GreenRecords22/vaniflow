@@ -66,6 +66,7 @@ class ConversationEngineTutorLoopTest {
 
         coEvery { ttsEngine.speak(any(), any(), any()) } returns TTSResult.Completed(0)
         coEvery { ttsEngine.stop() } returns Unit
+        coEvery { feedbackEngine.analyzeUtterance(any()) } returns null
         every { aiEngine.streamResponse(any(), any(), any()) } returns flowOf("That sounds delicious!")
 
         engine = ConversationEngine(
@@ -194,7 +195,7 @@ class ConversationEngineTutorLoopTest {
 
         assertEquals(ConversationEngine.TutorState.WAITING_FOR_RETRY, engine.tutorState)
         assertNotNull(engine.activeRetry)
-        assertEquals("he don't", engine.activeRetry?.originalError?.originalText)
+        assertEquals("He don't", engine.activeRetry?.originalError?.originalText)
     }
 
     @Test

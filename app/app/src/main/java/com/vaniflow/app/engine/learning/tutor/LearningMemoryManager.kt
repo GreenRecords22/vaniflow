@@ -14,8 +14,16 @@ import javax.inject.Singleton
  */
 @Singleton
 class LearningMemoryManager @Inject constructor(
-    private val learnerProfileRepository: LearnerProfileRepository? = null
+    private val learnerProfileRepository: LearnerProfileRepository
 ) {
+    // Test constructor
+    constructor() : this(object : LearnerProfileRepository {
+        override suspend fun getLearnerProfile(): LearnerProfile = LearnerProfile()
+        override suspend fun saveLearnerProfile(profile: LearnerProfile) {}
+        override fun observeLearnerProfile(): kotlinx.coroutines.flow.Flow<LearnerProfile?> = kotlinx.coroutines.flow.emptyFlow()
+        override suspend fun clearLearnerProfile() {}
+    })
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     var profile: LearnerProfile = LearnerProfile()

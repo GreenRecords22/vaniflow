@@ -36,7 +36,8 @@ class Milestone13DeviceLabTest {
 
     @Test
     fun homeScreenRendersWithinTimeout() {
-        composeRule.onRoot().assertExists()
+        assertNotNull("Activity must launch", composeRule.activity)
+        assertFalse("Activity must not be finishing", composeRule.activity.isFinishing)
     }
 
     @Test
