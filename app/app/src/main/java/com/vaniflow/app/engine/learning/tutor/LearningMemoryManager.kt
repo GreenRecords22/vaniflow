@@ -218,28 +218,19 @@ class LearningMemoryManager @Inject constructor(
     ) {
         sessionSpeechEvidences.add(pronunciation)
 
-        // 1. Log Speech / Fluency Learning Event if valid evidence exists
+        // 1. Log Speech / Fluency Learning Event if valid audio signal exists
         if (quality.isSignalUsable) {
-            if (pronunciation.phonemeEvidenceAvailable && pronunciation.observedPhonemePatterns.isNotEmpty()) {
+            if (pronunciation.observedPhonemePatterns.isNotEmpty()) {
                 for (sound in pronunciation.observedPhonemePatterns) {
-                    val isGoodClarity = pronunciation.qualitativeRating == QualitativePronunciationRating.CLEAR ||
-                        pronunciation.qualitativeRating == QualitativePronunciationRating.NATURAL
-
-                    val eventType = if (isGoodClarity) {
-                        LearningEventType.PRONUNCIATION_IMPROVEMENT
-                    } else {
-                        LearningEventType.PRONUNCIATION_OBSERVED
-                    }
-
                     val speechEvent = LearningEvent(
-                        type = eventType,
+                        type = LearningEventType.PRONUNCIATION_OBSERVED,
                         conceptId = sound,
                         category = EnglishErrorCategory.FLUENCY_FILLER,
-                        severity = if (isGoodClarity) CorrectionSeverity.STYLE else CorrectionSeverity.MINOR,
+                        severity = CorrectionSeverity.STYLE,
                         originalUtterance = pronunciation.transcript,
-                        isSuccess = isGoodClarity,
+                        isSuccess = true, // Reframe as practice target candidate, not a confirmed learner mispronunciation
                         sessionId = sessionId,
-                        confidenceImpact = if (isGoodClarity) 1.0f else 0.0f
+                        confidenceImpact = 0f
                     )
                     sessionLearningEvents.add(speechEvent)
                     persistEventAsync(speechEvent)

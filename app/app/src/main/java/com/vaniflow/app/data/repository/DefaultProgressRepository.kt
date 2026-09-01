@@ -267,10 +267,10 @@ class DefaultProgressRepository @Inject constructor(
 
         val pronState = when {
             speechList.isEmpty() -> "Building baseline..."
-            validSpeech.isEmpty() -> "Not enough evidence yet"
-            validSpeech.any { it.qualitativePronunciation == "NATURAL" } -> "Natural Pronunciation"
-            validSpeech.any { it.qualitativePronunciation == "CLEAR" } -> "Clear Pronunciation"
-            else -> "Developing Clarity"
+            practiceAreas.isNotEmpty() -> "Focus Candidates: " + practiceAreas.take(2).joinToString(", ")
+            speechList.any { it.qualitativePronunciation == "NATURAL" } -> "Audio Clarity: Natural"
+            speechList.any { it.qualitativePronunciation == "CLEAR" } -> "Audio Clarity: Clear"
+            else -> "Not enough pronunciation evidence"
         }
 
         val speechNote = when {

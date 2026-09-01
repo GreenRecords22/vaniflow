@@ -97,10 +97,11 @@ class SessionSummaryViewModel @Inject constructor(
                 .map { it.replace('_', ' ').replaceFirstChar { c -> c.uppercaseChar() } }
 
             val pronState = when {
-                speechAnalyses.isEmpty() || speechAnalyses.none { it.hasPhonemeEvidence } -> "Not enough evidence yet"
-                speechAnalyses.any { it.qualitativePronunciation == "NATURAL" } -> "Natural Pronunciation"
-                speechAnalyses.any { it.qualitativePronunciation == "CLEAR" } -> "Clear Pronunciation"
-                else -> "Developing Clarity"
+                speechAnalyses.isEmpty() -> "Not enough pronunciation evidence"
+                practicedSounds.isNotEmpty() -> "Practice Target: " + practicedSounds.first()
+                speechAnalyses.any { it.qualitativePronunciation == "NATURAL" } -> "Audio Clarity: Natural"
+                speechAnalyses.any { it.qualitativePronunciation == "CLEAR" } -> "Audio Clarity: Clear"
+                else -> "Not enough pronunciation evidence"
             }
 
             sessionRepository.getSessionById(sessionId).collect { session ->

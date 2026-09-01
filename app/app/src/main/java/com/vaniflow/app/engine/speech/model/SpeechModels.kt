@@ -55,14 +55,16 @@ enum class QualitativeFluencyRating(val displayLabel: String) {
 }
 
 /**
- * Truthful qualitative pronunciation rating.
- * Never outputs a fabricated score when acoustic evidence is absent.
+ * Truthful qualitative utterance clarity / pronunciation evidence rating.
+ * Note: Until an acoustic phoneme alignment model is integrated, this represents
+ * utterance acoustic clarity and never claims phoneme-level measurement.
  */
 enum class QualitativePronunciationRating(val displayLabel: String) {
-    NOT_ENOUGH_DATA("Not enough evidence yet"),
+    NOT_ENOUGH_DATA("Not enough pronunciation evidence"),
+    NOT_ENOUGH_PRONUNCIATION_EVIDENCE("Not enough pronunciation evidence"),
     DEVELOPING("Developing Clarity"),
-    CLEAR("Clear Pronunciation"),
-    NATURAL("Natural Pronunciation")
+    CLEAR("Clear Speech"),
+    NATURAL("Natural Clarity")
 }
 
 /**
@@ -97,7 +99,14 @@ data class FluencyAnalysisResult(
 )
 
 /**
- * Truthful pronunciation evidence model.
+ * Truthful pronunciation & speech evidence model.
+ *
+ * Explicitly separates:
+ * 1. Audio Quality Evidence
+ * 2. Temporal Fluency Evidence
+ * 3. Transcript Evidence
+ * 4. Pronunciation Practice Candidates / Targets
+ * 5. Actual Phoneme Acoustic Evidence (remains false until an acoustic phoneme model is active)
  */
 data class PronunciationEvidence(
     val utteranceId: String = UUID.randomUUID().toString(),
@@ -110,10 +119,15 @@ data class PronunciationEvidence(
     val speakingRateWpm: Float,
     val speechToSilenceRatio: Float,
     val signalQualityScore: Float, // 0..100
-    val phonemeEvidenceAvailable: Boolean,
+    val audioQualityEvidenceAvailable: Boolean = false,
+    val fluencyEvidenceAvailable: Boolean = false,
+    val transcriptEvidenceAvailable: Boolean = false,
+    val phonemeEvidenceAvailable: Boolean = false, // Strictly false in current architecture
+    val practiceTargetId: String? = null,
+    val practiceTargetLabel: String? = null,
     val observedPhonemePatterns: List<String> = emptyList(),
-    val qualitativeRating: QualitativePronunciationRating,
-    val confidence: Float,
+    val qualitativeRating: QualitativePronunciationRating = QualitativePronunciationRating.NOT_ENOUGH_PRONUNCIATION_EVIDENCE,
+    val confidence: Float = 0f,
     val practiceSoundSuggestion: String? = null,
     val timestampEpochMs: Long = System.currentTimeMillis()
 )

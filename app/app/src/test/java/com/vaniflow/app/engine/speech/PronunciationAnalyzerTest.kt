@@ -25,26 +25,26 @@ class PronunciationAnalyzerTest {
     }
 
     @Test
-    fun `analyze returns NOT_ENOUGH_DATA when audio is too brief`() {
+    fun `analyze returns NOT_ENOUGH_PRONUNCIATION_EVIDENCE when audio is too brief`() {
         val segment = SpeechAudioSegment(samples = ShortArray(3200), durationMs = 200L)
         val result = pronunciationAnalyzer.analyze(segment, "Hello there")
 
-        assertEquals(QualitativePronunciationRating.NOT_ENOUGH_DATA, result.qualitativeRating)
+        assertEquals(QualitativePronunciationRating.NOT_ENOUGH_PRONUNCIATION_EVIDENCE, result.qualitativeRating)
         assertFalse(result.phonemeEvidenceAvailable)
         assertNull(result.practiceSoundSuggestion)
     }
 
     @Test
-    fun `analyze returns NOT_ENOUGH_DATA when audio is empty or blank transcript`() {
+    fun `analyze returns NOT_ENOUGH_PRONUNCIATION_EVIDENCE when audio is empty or blank transcript`() {
         val segment = SpeechAudioSegment(samples = ShortArray(0), durationMs = 0L)
         val result = pronunciationAnalyzer.analyze(segment, "")
 
-        assertEquals(QualitativePronunciationRating.NOT_ENOUGH_DATA, result.qualitativeRating)
+        assertEquals(QualitativePronunciationRating.NOT_ENOUGH_PRONUNCIATION_EVIDENCE, result.qualitativeRating)
         assertFalse(result.phonemeEvidenceAvailable)
     }
 
     @Test
-    fun `analyze identifies target pronunciation sound and offers coaching tip`() {
+    fun `analyze identifies target pronunciation sound and offers coaching tip without claiming phoneme evidence`() {
         val sampleRate = 16000
         val totalSamples = sampleRate * 2
         val samples = ShortArray(totalSamples)
@@ -57,7 +57,8 @@ class PronunciationAnalyzerTest {
         val transcript = "I think we should walk through the park"
         val result = pronunciationAnalyzer.analyze(segment, transcript)
 
-        assertTrue(result.phonemeEvidenceAvailable)
+        assertTrue(result.audioQualityEvidenceAvailable)
+        assertFalse("Phoneme evidence MUST remain false", result.phonemeEvidenceAvailable)
         assertTrue(result.observedPhonemePatterns.contains("th_unvoiced"))
         assertNotNull(result.practiceSoundSuggestion)
         assertTrue(result.practiceSoundSuggestion!!.contains("teeth"))

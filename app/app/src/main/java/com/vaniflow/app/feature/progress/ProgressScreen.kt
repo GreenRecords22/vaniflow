@@ -915,7 +915,7 @@ private fun SpeechIntelligenceProgressCard(
 
             if (practiceAreas.isNotEmpty()) {
                 Text(
-                    text = "Target Sounds: " + practiceAreas.joinToString(", "),
+                    text = "Focus Target Candidates: " + practiceAreas.joinToString(", "),
                     style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
                 )
             }

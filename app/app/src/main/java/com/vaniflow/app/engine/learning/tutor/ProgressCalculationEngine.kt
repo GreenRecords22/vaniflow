@@ -102,10 +102,15 @@ class ProgressCalculationEngine @Inject constructor() {
             .map { it.replace('_', ' ').replaceFirstChar { c -> c.uppercaseChar() } }
 
         val pronunciationState = when {
-            validSpeechEvidences.isEmpty() -> "Not enough evidence yet"
-            validSpeechEvidences.all { it.qualitativeRating.name == "NATURAL" } -> "Natural Pronunciation"
-            validSpeechEvidences.any { it.qualitativeRating.name == "CLEAR" || it.qualitativeRating.name == "NATURAL" } -> "Clear Pronunciation"
-            else -> "Developing Clarity"
+            speechEvidences.isEmpty() || speechEvidences.none { it.audioQualityEvidenceAvailable } -> "Not enough pronunciation evidence"
+            speechEvidences.any { it.observedPhonemePatterns.isNotEmpty() } -> {
+                val target = speechEvidences.firstNotNullOfOrNull { it.practiceTargetLabel }
+                    ?: speechEvidences.firstNotNullOfOrNull { it.observedPhonemePatterns.firstOrNull() }?.replace('_', ' ')?.replaceFirstChar { c -> c.uppercaseChar() }
+                if (target != null) "Practice Target: $target" else "Audio Clarity: Clear"
+            }
+            speechEvidences.all { it.qualitativeRating.name == "NATURAL" } -> "Audio Clarity: Natural"
+            speechEvidences.any { it.qualitativeRating.name == "CLEAR" || it.qualitativeRating.name == "NATURAL" } -> "Audio Clarity: Clear"
+            else -> "Audio Clarity: Developing"
         }
 
         val clarityRating = when {

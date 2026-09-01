@@ -359,11 +359,11 @@ private fun ScoresGrid(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            val pronDisplay = if (pronunciationScore > 0) "$pronunciationScore%" else if (pronunciationState.contains("Natural")) "Natural" else if (pronunciationState.contains("Clear")) "Clear" else "State"
+            val pronDisplay = if (pronunciationScore > 0) "$pronunciationScore%" else if (pronunciationState.contains("Natural")) "Natural" else if (pronunciationState.contains("Clear")) "Clear" else if (pronunciationState.contains("Target")) "Target" else "Evidence"
             val pronProgress = if (pronunciationScore > 0) pronunciationScore / 100f else if (pronunciationState.contains("Natural") || pronunciationState.contains("Clear")) 0.85f else 0.5f
 
             ScoreProgressCard(
-                title = "PRONUNCIATION",
+                title = "CLARITY",
                 displayValue = pronDisplay,
                 progress = pronProgress,
                 modifier = Modifier.weight(1f),
@@ -448,7 +448,7 @@ private fun SpeechInsightsCard(
                 if (wpm > 0) {
                     Column(horizontalAlignment = Alignment.End) {
                         Text(
-                            text = "Speaking Rate",
+                            text = "Approx. Speaking Rate",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -464,7 +464,7 @@ private fun SpeechInsightsCard(
             if (practicedSounds.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "Practiced Speech Sounds: " + practicedSounds.joinToString(", "),
+                    text = "Pronunciation Focus Candidates: " + practicedSounds.joinToString(", "),
                     style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
                 )
             }
