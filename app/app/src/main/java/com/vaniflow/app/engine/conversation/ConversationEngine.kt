@@ -26,6 +26,8 @@ import com.vaniflow.app.engine.learning.tutor.EnglishError
 import com.vaniflow.app.engine.learning.tutor.EnglishErrorCategory
 import com.vaniflow.app.engine.learning.tutor.LearnerProfile
 import com.vaniflow.app.engine.learning.tutor.LearningMemoryManager
+import com.vaniflow.app.engine.learning.tutor.model.TutorAction
+import com.vaniflow.app.engine.learning.tutor.model.TutorDecision
 import com.vaniflow.app.engine.scenario.ScenarioPromptBuilder
 import com.vaniflow.app.engine.speech.FluencyAnalyzer
 import com.vaniflow.app.engine.speech.PronunciationAnalyzer
@@ -349,91 +351,62 @@ class ConversationEngine private constructor(
             )
             _turns.value = _turns.value + userTurn
 
-            if (evaluation.isFixed) {
-                // Successful retry: Praise and resume normal conversation
+            val learnerState = learningMemoryManager.buildLearnerState(
+                isRetryActive = true,
+                retryAttemptsCount = retryCtx.attemptsCount,
+                activeRetryError = retryCtx.originalError,
+                sessionDurationMs = if (sessionStartTimeMs > 0) System.currentTimeMillis() - sessionStartTimeMs else 0L,
+                sessionTurnCount = _turns.value.count { it.speaker == ConversationTurn.Speaker.USER },
+                isFairUseExceeded = usageTracker.isFairUseExceeded()
+            )
+            val retryDecision = learningMemoryManager.evaluateTutorDecision(
+                state = learnerState,
+                retryEvaluation = evaluation
+            )
+
+            if (retryDecision.action == TutorAction.PRAISE_SUCCESS) {
                 tutorState = TutorState.NORMAL
                 activeRetry = null
-
-                val praiseText = evaluation.praiseFeedback
-                val aiTurn = ConversationTurn(
-                    id = UUID.randomUUID().toString(),
-                    sessionId = currentSessionId,
-                    speaker = ConversationTurn.Speaker.AI,
-                    text = praiseText,
-                    timestamp = System.currentTimeMillis()
-                )
-                _turns.value = _turns.value + aiTurn
-
-                _state.value = ConversationState.AI_SPEAKING
-                val ttsRes = ttsEngine.speak(praiseText, character.voiceId, character.speakingRate)
-                if (!isInterrupted.get() && ttsRes !is TTSResult.Error) {
-                    _state.value = ConversationState.LISTENING
-                } else if (ttsRes is TTSResult.Error) {
-                    _errorMessage.value = "I couldn't play that response. Tap to retry."
-                    _state.value = ConversationState.LISTENING
-                }
-                return
-            } else if (retryCtx.attemptsCount < 2) {
-                // 2nd attempt: Give second gentle hint
+            } else if (retryDecision.action == TutorAction.GIVE_SECOND_HINT) {
                 retryCtx.attemptsCount++
-                val hint = "Almost! Remember: say '${retryCtx.originalError.suggestedText}' instead of '${retryCtx.originalError.originalText}'. Try it once more."
-                val aiTurn = ConversationTurn(
-                    id = UUID.randomUUID().toString(),
-                    sessionId = currentSessionId,
-                    speaker = ConversationTurn.Speaker.AI,
-                    text = hint,
-                    timestamp = System.currentTimeMillis()
-                )
-                _turns.value = _turns.value + aiTurn
-
-                _state.value = ConversationState.AI_SPEAKING
-                val ttsRes = ttsEngine.speak(hint, character.voiceId, character.speakingRate)
-                if (!isInterrupted.get() && ttsRes !is TTSResult.Error) {
-                    _state.value = ConversationState.LISTENING
-                } else if (ttsRes is TTSResult.Error) {
-                    _errorMessage.value = "I couldn't play that response. Tap to retry."
-                    _state.value = ConversationState.LISTENING
-                }
-                return
             } else {
-                // Max retries reached (2 attempts): Acknowledge and resume naturally without trapping user
                 tutorState = TutorState.NORMAL
                 activeRetry = null
-                val exitMsg = "Good try! The natural way is: \"${retryCtx.correctedSentence}\". Let's keep going!"
-                val aiTurn = ConversationTurn(
-                    id = UUID.randomUUID().toString(),
-                    sessionId = currentSessionId,
-                    speaker = ConversationTurn.Speaker.AI,
-                    text = exitMsg,
-                    timestamp = System.currentTimeMillis()
-                )
-                _turns.value = _turns.value + aiTurn
-
-                _state.value = ConversationState.AI_SPEAKING
-                val ttsRes = ttsEngine.speak(exitMsg, character.voiceId, character.speakingRate)
-                if (!isInterrupted.get() && ttsRes !is TTSResult.Error) {
-                    _state.value = ConversationState.LISTENING
-                } else if (ttsRes is TTSResult.Error) {
-                    _errorMessage.value = "I couldn't play that response. Tap to retry."
-                    _state.value = ConversationState.LISTENING
-                }
-                return
             }
+
+            val spokenMsg = retryDecision.spokenInterventionText ?: evaluation.praiseFeedback
+            val aiTurn = ConversationTurn(
+                id = UUID.randomUUID().toString(),
+                sessionId = currentSessionId,
+                speaker = ConversationTurn.Speaker.AI,
+                text = spokenMsg,
+                timestamp = System.currentTimeMillis()
+            )
+            _turns.value = _turns.value + aiTurn
+
+            _state.value = ConversationState.AI_SPEAKING
+            val ttsRes = ttsEngine.speak(spokenMsg, character.voiceId, character.speakingRate)
+            if (!isInterrupted.get() && ttsRes !is TTSResult.Error) {
+                _state.value = ConversationState.LISTENING
+            } else if (ttsRes is TTSResult.Error) {
+                _errorMessage.value = "I couldn't play that response. Tap to retry."
+                _state.value = ConversationState.LISTENING
+            }
+            return
         }
 
         // -------------------------------------------------------------
         // CASE B: Normal Utterance Processing
         // -------------------------------------------------------------
         // 1. Analyze with EnglishCorrectionEngine & update LearningMemoryManager
-        val decision = correctionEngine.analyzeUtterance(userText)
-        val shouldSpokenCorrect = learningMemoryManager.shouldDeliverSpokenCorrection(decision)
-        learningMemoryManager.onUtteranceAnalyzed(decision, sessionId = currentSessionId, userUtterance = userText)
+        val correctionDecision = correctionEngine.analyzeUtterance(userText)
+        learningMemoryManager.onUtteranceAnalyzed(correctionDecision, sessionId = currentSessionId, userUtterance = userText)
 
-        val correction: Correction? = if (decision.hasError && decision.detectedErrors.isNotEmpty()) {
-            val primary = decision.detectedErrors.first()
+        val correction: Correction? = if (correctionDecision.hasError && correctionDecision.detectedErrors.isNotEmpty()) {
+            val primary = correctionDecision.detectedErrors.first()
             Correction(
                 originalText = primary.originalText,
-                suggestedText = decision.correctedSentence ?: primary.suggestedText,
+                suggestedText = correctionDecision.correctedSentence ?: primary.suggestedText,
                 explanation = primary.explanation,
                 category = when (primary.category) {
                     EnglishErrorCategory.TENSE, EnglishErrorCategory.GRAMMAR, EnglishErrorCategory.SUBJECT_VERB_AGREEMENT,
@@ -477,19 +450,38 @@ class ConversationEngine private constructor(
         val pronunciation = pronunciationAnalyzer.analyze(segmentToAnalyze, userText, sessionId = currentSessionId, utteranceId = userTurnId)
         learningMemoryManager.onSpeechTurnAnalyzed(quality, fluency, pronunciation, sessionId = currentSessionId, turnId = userTurnId)
 
-        // 4. Intelligent Correction Decision: Check if error warrants spoken interruption + retry
-        if (shouldSpokenCorrect && decision.detectedErrors.isNotEmpty()) {
-            val primaryErr = decision.detectedErrors.first()
-            val correctedText = decision.correctedSentence ?: primaryErr.suggestedText
-            val spokenCorrection = "${primaryErr.explanation} Try saying: \"$correctedText\""
+        // 4. Central Pedagogical Decision by TutorDecisionEngine
+        val learnerState = learningMemoryManager.buildLearnerState(
+            isRetryActive = false,
+            sessionDurationMs = if (sessionStartTimeMs > 0) System.currentTimeMillis() - sessionStartTimeMs else 0L,
+            sessionTurnCount = _turns.value.count { it.speaker == ConversationTurn.Speaker.USER },
+            isFairUseExceeded = usageTracker.isFairUseExceeded()
+        )
+        val tutorDecision = learningMemoryManager.evaluateTutorDecision(
+            state = learnerState,
+            rawDecision = correctionDecision
+        )
 
-            tutorState = TutorState.WAITING_FOR_RETRY
-            activeRetry = ActiveRetryContext(
-                originalError = primaryErr,
-                originalUtterance = userText,
-                correctedSentence = correctedText,
-                attemptsCount = 1
-            )
+        // 5. Intelligent Correction Decision: Check if error warrants spoken interruption + retry
+        if (tutorDecision.shouldInterruptTurn && !tutorDecision.spokenInterventionText.isNullOrBlank()) {
+            val spokenCorrection = tutorDecision.spokenInterventionText
+
+            if (tutorDecision.action == TutorAction.ASK_RETRY || tutorDecision.action == TutorAction.CRITICAL_CORRECTION || tutorDecision.action == TutorAction.IMPORTANT_CORRECTION) {
+                tutorState = TutorState.WAITING_FOR_RETRY
+                val primaryErr = correctionDecision.detectedErrors.firstOrNull() ?: EnglishError(
+                    originalText = userText,
+                    suggestedText = correctionDecision.correctedSentence ?: userText,
+                    category = EnglishErrorCategory.GRAMMAR,
+                    severity = CorrectionSeverity.IMPORTANT,
+                    explanation = spokenCorrection
+                )
+                activeRetry = ActiveRetryContext(
+                    originalError = primaryErr,
+                    originalUtterance = userText,
+                    correctedSentence = correctionDecision.correctedSentence ?: primaryErr.suggestedText,
+                    attemptsCount = 1
+                )
+            }
 
             val aiTurn = ConversationTurn(
                 id = UUID.randomUUID().toString(),
@@ -511,7 +503,7 @@ class ConversationEngine private constructor(
             return
         }
 
-        // 5. Normal AI Conversation Response Streaming
+        // 6. Normal AI Conversation Response Streaming with Tutor Directive
         val history = _turns.value.map { turn ->
             AITurn(
                 role = if (turn.speaker == ConversationTurn.Speaker.USER) AITurn.Role.USER else AITurn.Role.ASSISTANT,
@@ -521,7 +513,7 @@ class ConversationEngine private constructor(
 
         val personaPrompt = CharacterPromptBuilder.buildPersonaPrompt(character)
         val scenarioPrompt = ScenarioPromptBuilder.buildScenarioPrompt(scenario)
-        val tutoringPrompt = learningMemoryManager.getTutoringPromptContext()
+        val tutoringPrompt = learningMemoryManager.getTutoringPromptContextFromDecision(tutorDecision)
 
         val fullSystemPrompt = ConversationPromptBuilder.buildRuntimePrompt(
             characterName = character.name,

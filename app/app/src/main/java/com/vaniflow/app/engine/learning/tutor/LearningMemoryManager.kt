@@ -512,27 +512,65 @@ class LearningMemoryManager @Inject constructor(
         )
     }
 
+    val tutorDecisionEngine: TutorDecisionEngine = TutorDecisionEngine(correctionPolicyEngine, difficultyEngine)
+
+    fun buildLearnerState(
+        isRetryActive: Boolean = false,
+        retryAttemptsCount: Int = 0,
+        activeRetryError: EnglishError? = null,
+        sessionDurationMs: Long = 0L,
+        sessionTurnCount: Int = 0,
+        isFairUseExceeded: Boolean = false
+    ): com.vaniflow.app.engine.learning.tutor.model.TutorLearnerState {
+        val masteryScores = masteryMap.mapValues { it.value.masteryScore }
+        return com.vaniflow.app.engine.learning.tutor.model.TutorLearnerState(
+            cefrLevel = profile.estimatedLevel,
+            speakingConfidence = profile.speakingConfidenceScore,
+            confidenceTrend = if (profile.successfulRetries > 0) "Improving" else "Steady",
+            weakestConcepts = profile.conceptsNeedingPractice.toList(),
+            masteredConcepts = profile.masteredConcepts.toSet(),
+            conceptMasteryScores = masteryScores,
+            recentMistakes = profile.recentCorrections.toList(),
+            successfulRetriesCount = profile.successfulRetries,
+            consecutiveFailures = policyState.consecutiveErrorsCount,
+            isStruggleBackoffActive = policyState.isStruggleBackoffActive,
+            activeGoals = activeGoals.toList(),
+            vocabularyNeedingPractice = activeVocabularyExpressions.toList(),
+            latestQuality = null,
+            latestFluency = null,
+            latestPronunciation = sessionSpeechEvidences.lastOrNull(),
+            sessionTurnCount = sessionTurnCount,
+            sessionDurationMs = sessionDurationMs,
+            currentDifficulty = currentDifficulty,
+            isFairUseExceeded = isFairUseExceeded,
+            isRetryActive = isRetryActive,
+            retryAttemptsCount = retryAttemptsCount,
+            activeRetryError = activeRetryError
+        )
+    }
+
+    fun evaluateTutorDecision(
+        state: com.vaniflow.app.engine.learning.tutor.model.TutorLearnerState,
+        rawDecision: TutorCorrectionDecision? = null,
+        retryEvaluation: RetryEvaluation? = null
+    ): com.vaniflow.app.engine.learning.tutor.model.TutorDecision {
+        return tutorDecisionEngine.evaluateDecision(state, rawDecision, retryEvaluation)
+    }
+
     /**
      * Produces compact, bounded coaching context for injection into Cloud AI / SLM prompts
-     * so that the tutor naturally steers conversations toward practicing weak areas and goals.
+     * using the deterministic decision produced by TutorDecisionEngine.
      */
-    fun getTutoringPromptContext(): String {
-        val weakConcepts = profile.conceptsNeedingPractice.toList()
-        val practiceSuggestion = when {
-            weakConcepts.contains("tense") -> "Learner recently struggled with past tense (e.g. 'buyed' -> 'bought', 'go' -> 'went'). Naturally ask a question about yesterday or a past event."
-            weakConcepts.contains("subject_verb_agreement") -> "Learner is practicing subject-verb agreement (e.g. 'he likes', 'they like'). Keep sentence examples clear."
-            weakConcepts.contains("articles") -> "Learner is working on article usage ('a', 'an', 'the'). Model clean phrasing."
-            weakConcepts.contains("prepositions") -> "Learner is practicing prepositions ('for 3 years', 'good at')."
-            else -> "Learner is speaking smoothly. Encourage fluent storytelling and natural idioms."
-        }
-
+    fun getTutoringPromptContextFromDecision(decision: com.vaniflow.app.engine.learning.tutor.model.TutorDecision): String {
         val goalsText = if (activeGoals.isNotEmpty()) {
             "Active Goals: " + activeGoals.joinToString("; ") { it.title }
         } else {
             ""
         }
 
-        val vocabText = if (activeVocabularyExpressions.isNotEmpty()) {
+        val vocabText = if (!decision.suggestedVocabularyToReuse.isNullOrBlank()) {
+            "Target Expression to Elicit: \"${decision.suggestedVocabularyToReuse}\""
+        } else if (activeVocabularyExpressions.isNotEmpty()) {
             "Target Expressions to Model/Elicit: " + activeVocabularyExpressions.take(3).joinToString { "\"${it.wordOrPhrase}\"" }
         } else {
             ""
@@ -552,11 +590,20 @@ class LearningMemoryManager @Inject constructor(
         return """
 [TUTORING CONTEXT]
 ${profile.getCompactSummary()}
-Difficulty: ${currentDifficulty.displayLabel} (${currentDifficulty.targetSentenceComplexity})
+Difficulty: ${decision.adaptiveDifficulty.displayLabel} (${decision.adaptiveDifficulty.targetSentenceComplexity})
 $goalsText
 $vocabText
-Coaching Directive: $practiceSuggestion
+Coaching Directive: ${decision.coachingDirective ?: "Maintain engaging conversation flow."}
 $speechDirective
 """.trimIndent()
+    }
+
+    /**
+     * Backward-compatible helper producing prompt context.
+     */
+    fun getTutoringPromptContext(): String {
+        val state = buildLearnerState()
+        val decision = evaluateTutorDecision(state)
+        return getTutoringPromptContextFromDecision(decision)
     }
 }
