@@ -149,6 +149,9 @@ class LearningMemoryManager @Inject constructor(
         persistProfileAsync()
     }
 
+    val expressionExtractor = SpokenExpressionExtractor()
+    val activeVocabularyExpressions = CopyOnWriteArrayList<VocabularyMemory>()
+
     fun startSession(scenario: Scenario, sessionId: String) {
         sessionLearningEvents.clear()
         policyState.consecutiveErrorsCount = 0
@@ -160,6 +163,15 @@ class LearningMemoryManager @Inject constructor(
         val goals = learningGoalGenerator.generateGoalsForSession(profile, masteryMap.values.toList(), scenario)
         activeGoals.clear()
         activeGoals.addAll(goals)
+
+        // Load targeted spoken expressions for the session
+        activeVocabularyExpressions.clear()
+        scope.launch {
+            try {
+                val needingPractice = vocabularyMemoryRepository.getExpressionsNeedingPractice()
+                activeVocabularyExpressions.addAll(needingPractice.take(4))
+            } catch (_: Exception) {}
+        }
 
         updateAdaptiveDifficulty()
     }
@@ -183,6 +195,29 @@ class LearningMemoryManager @Inject constructor(
     ) {
         synchronized(this) {
             profile.totalUtterances++
+
+            // 1. Spoken Vocabulary & Expression Extraction
+            if (!userUtterance.isNullOrBlank()) {
+                val extracted = expressionExtractor.extractExpressions(userUtterance)
+                for (vocab in extracted) {
+                    rememberVocabulary(vocab.wordOrPhrase, vocab.meaning, vocab.exampleSentence)
+                    val vocabEvent = LearningEvent(
+                        type = LearningEventType.VOCABULARY_LEARNED,
+                        conceptId = vocab.wordOrPhrase,
+                        category = EnglishErrorCategory.VOCABULARY,
+                        severity = CorrectionSeverity.STYLE,
+                        originalUtterance = userUtterance,
+                        correctedForm = vocab.wordOrPhrase,
+                        isSuccess = true,
+                        sessionId = sessionId,
+                        confidenceImpact = 1.0f
+                    )
+                    sessionLearningEvents.add(vocabEvent)
+                    persistEventAsync(vocabEvent)
+                }
+            }
+
+            // 2. Error Analysis vs Natural Clean Turn
             if (decision.hasError) {
                 for (error in decision.detectedErrors) {
                     profile.recordMistake(error.ruleIdentifier, error.category)
@@ -221,6 +256,27 @@ class LearningMemoryManager @Inject constructor(
             } else {
                 policyState.recordCleanTurn()
                 profile.speakingConfidenceScore = (profile.speakingConfidenceScore + 0.5f).coerceAtMost(100f)
+
+                // Natural Mastery Gain on Clean Turn for previously practiced concepts
+                val weakConcept = masteryMap.values.find { it.needsPractice }
+                if (weakConcept != null) {
+                    val updated = masteryEngine.onNaturalCorrectUsage(weakConcept.conceptId, weakConcept.category, weakConcept)
+                    masteryMap[weakConcept.conceptId] = updated
+                    persistMasteryAsync(updated)
+
+                    val masteryEvent = LearningEvent(
+                        type = LearningEventType.MASTERY_GAIN,
+                        conceptId = weakConcept.conceptId,
+                        category = weakConcept.category,
+                        severity = CorrectionSeverity.MINOR,
+                        originalUtterance = userUtterance,
+                        isSuccess = true,
+                        sessionId = sessionId,
+                        confidenceImpact = 1.0f
+                    )
+                    sessionLearningEvents.add(masteryEvent)
+                    persistEventAsync(masteryEvent)
+                }
             }
 
             // Refresh CEFR level estimation & difficulty
@@ -386,11 +442,18 @@ class LearningMemoryManager @Inject constructor(
             ""
         }
 
+        val vocabText = if (activeVocabularyExpressions.isNotEmpty()) {
+            "Target Expressions to Model/Elicit: " + activeVocabularyExpressions.take(3).joinToString { "\"${it.wordOrPhrase}\"" }
+        } else {
+            ""
+        }
+
         return """
 [TUTORING CONTEXT]
 ${profile.getCompactSummary()}
 Difficulty: ${currentDifficulty.displayLabel} (${currentDifficulty.targetSentenceComplexity})
 $goalsText
+$vocabText
 Coaching Directive: $practiceSuggestion
 """.trimIndent()
     }

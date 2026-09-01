@@ -2,12 +2,18 @@ package com.vaniflow.app.data.repository
 
 import com.vaniflow.app.data.local.db.dao.SessionDao
 import com.vaniflow.app.data.local.db.entity.SessionEntity
+import com.vaniflow.app.domain.repository.ConceptMasteryRepository
 import com.vaniflow.app.domain.repository.ImprovementStat
+import com.vaniflow.app.domain.repository.LearnerProfileRepository
 import com.vaniflow.app.domain.repository.ProgressData
 import com.vaniflow.app.domain.repository.ProgressRepository
+import com.vaniflow.app.domain.repository.VocabularyMemoryRepository
 import com.vaniflow.app.domain.repository.WeeklyDayData
+import com.vaniflow.app.engine.learning.tutor.LearnerProfile
+import com.vaniflow.app.engine.learning.tutor.model.MasteryState
+import com.vaniflow.app.engine.learning.tutor.model.VocabularyMemory
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
@@ -18,12 +24,46 @@ import javax.inject.Singleton
 
 @Singleton
 class DefaultProgressRepository @Inject constructor(
-    private val sessionDao: SessionDao
+    private val sessionDao: SessionDao,
+    private val learnerProfileRepository: LearnerProfileRepository,
+    private val conceptMasteryRepository: ConceptMasteryRepository,
+    private val vocabularyMemoryRepository: VocabularyMemoryRepository
 ) : ProgressRepository {
 
+    constructor(sessionDao: SessionDao) : this(
+        sessionDao = sessionDao,
+        learnerProfileRepository = object : LearnerProfileRepository {
+            private val flow = kotlinx.coroutines.flow.MutableStateFlow(LearnerProfile())
+            override fun observeLearnerProfile(): Flow<LearnerProfile?> = flow
+            override suspend fun getLearnerProfile(): LearnerProfile = flow.value
+            override suspend fun saveLearnerProfile(profile: LearnerProfile) { flow.value = profile }
+            override suspend fun clearLearnerProfile() { flow.value = LearnerProfile() }
+        },
+        conceptMasteryRepository = object : ConceptMasteryRepository {
+            override fun getAllMasteryFlow() = kotlinx.coroutines.flow.flowOf(emptyList<MasteryState>())
+            override suspend fun getAllMastery() = emptyList<MasteryState>()
+            override suspend fun getMastery(conceptId: String) = null
+            override suspend fun saveMastery(mastery: MasteryState) {}
+            override suspend fun saveAllMastery(list: List<MasteryState>) {}
+            override suspend fun clearAllMastery() {}
+        },
+        vocabularyMemoryRepository = object : VocabularyMemoryRepository {
+            override fun getAllVocabularyMemoryFlow() = kotlinx.coroutines.flow.flowOf(emptyList<VocabularyMemory>())
+            override suspend fun getExpressionsNeedingPractice() = emptyList<VocabularyMemory>()
+            override suspend fun saveExpression(memory: VocabularyMemory) {}
+            override suspend fun deleteExpression(id: String) {}
+            override suspend fun clearAllVocabularyMemory() {}
+        }
+    )
+
     override fun getProgress(): Flow<ProgressData> {
-        return sessionDao.getAllSessions().map { sessions ->
-            computeProgressData(sessions)
+        return combine(
+            sessionDao.getAllSessions(),
+            learnerProfileRepository.observeLearnerProfile(),
+            conceptMasteryRepository.getAllMasteryFlow(),
+            vocabularyMemoryRepository.getAllVocabularyMemoryFlow()
+        ) { sessions, profile, masteryList, vocabList ->
+            computeProgressData(sessions, profile ?: LearnerProfile(), masteryList, vocabList)
         }
     }
 
@@ -79,7 +119,12 @@ class DefaultProgressRepository @Inject constructor(
         return Pair(currentStreak, maxOf(longestStreak, currentStreak))
     }
 
-    private fun computeProgressData(sessions: List<SessionEntity>): ProgressData {
+    private fun computeProgressData(
+        sessions: List<SessionEntity>,
+        profile: LearnerProfile,
+        masteryList: List<MasteryState>,
+        vocabList: List<VocabularyMemory>
+    ): ProgressData {
         if (sessions.isEmpty()) {
             return ProgressData(
                 totalMinutes = 0,
@@ -92,7 +137,13 @@ class DefaultProgressRepository @Inject constructor(
                 averagePronunciation = 0,
                 averageVocabulary = 0,
                 improvements = emptyList(),
-                aiCoachRecommendation = "Start your first conversation today to unlock speaking insights!"
+                aiCoachRecommendation = "Start your first conversation today to build speaking confidence!",
+                estimatedLevel = if (profile.totalUtterances >= 15) profile.estimatedLevel.displayLabel else "Building level...",
+                speakingConfidenceScore = profile.speakingConfidenceScore,
+                masteredConceptsCount = masteryList.count { it.isMastered },
+                conceptsNeedingPracticeCount = masteryList.count { it.needsPractice },
+                vocabularyCount = vocabList.size,
+                conceptsNeedingPractice = masteryList.filter { it.needsPractice }.map { it.conceptId }
             )
         }
 
@@ -101,7 +152,7 @@ class DefaultProgressRepository @Inject constructor(
         val timestamps = sessions.map { it.startTimeMs }
         val (currentStreak, longestStreak) = calculateStreak(timestamps)
 
-        // Averages
+        // Real Averages
         val avgFluency = (sessions.sumOf { it.fluencyScore } / sessionCount).coerceIn(0, 100)
         val avgGrammar = (sessions.sumOf { it.grammarScore } / sessionCount).coerceIn(0, 100)
         val avgPronunciation = (sessions.sumOf { it.pronunciationScore } / sessionCount).coerceIn(0, 100)
@@ -136,26 +187,54 @@ class DefaultProgressRepository @Inject constructor(
             )
         }
 
-        val improvements = listOf(
-            ImprovementStat(
-                label = "Speaking fluency",
-                changeText = "+${(avgFluency - 70).coerceAtLeast(5)}%",
-                isPositive = true
-            ),
-            ImprovementStat(
-                label = "Grammar consistency",
-                changeText = "+${(avgGrammar - 60).coerceAtLeast(4)}%",
-                isPositive = true
-            ),
-            ImprovementStat(
-                label = "Vocabulary variety",
-                changeText = "+${(avgVocabulary - 65).coerceAtLeast(6)}%",
-                isPositive = true
+        // Evidence-based improvements
+        val improvements = mutableListOf<ImprovementStat>()
+        val mastered = masteryList.filter { it.isMastered }
+        if (mastered.isNotEmpty()) {
+            improvements.add(
+                ImprovementStat(
+                    label = "Mastered concepts",
+                    changeText = "${mastered.size} concepts solid",
+                    isPositive = true
+                )
             )
-        )
+        }
+        if (profile.successfulRetries > 0) {
+            improvements.add(
+                ImprovementStat(
+                    label = "Self-corrections",
+                    changeText = "${profile.successfulRetries} successful retries",
+                    isPositive = true
+                )
+            )
+        }
+        if (vocabList.isNotEmpty()) {
+            improvements.add(
+                ImprovementStat(
+                    label = "Spoken expressions",
+                    changeText = "${vocabList.size} expressions practiced",
+                    isPositive = true
+                )
+            )
+        }
+        if (improvements.isEmpty()) {
+            improvements.add(
+                ImprovementStat(
+                    label = "Speaking fluency",
+                    changeText = "Practicing consistently",
+                    isPositive = true
+                )
+            )
+        }
 
         val latestSession = sessions.firstOrNull()
-        val recommendation = latestSession?.focusNext ?: "Practice daily conversations to maintain your speaking streak!"
+        val recommendation = latestSession?.focusNext ?: "Practice daily conversations to maintain your speaking momentum!"
+
+        val levelDisplay = if (profile.totalUtterances >= 15) {
+            profile.estimatedLevel.displayLabel
+        } else {
+            "Building level (${profile.totalUtterances}/15 turns)"
+        }
 
         return ProgressData(
             totalMinutes = totalMinutes,
@@ -168,7 +247,13 @@ class DefaultProgressRepository @Inject constructor(
             averagePronunciation = avgPronunciation,
             averageVocabulary = avgVocabulary,
             improvements = improvements,
-            aiCoachRecommendation = recommendation
+            aiCoachRecommendation = recommendation,
+            estimatedLevel = levelDisplay,
+            speakingConfidenceScore = profile.speakingConfidenceScore,
+            masteredConceptsCount = masteryList.count { it.isMastered },
+            conceptsNeedingPracticeCount = masteryList.count { it.needsPractice },
+            vocabularyCount = vocabList.size,
+            conceptsNeedingPractice = masteryList.filter { it.needsPractice }.map { it.conceptId }
         )
     }
 

@@ -630,8 +630,8 @@ class ConversationEngine private constructor(
         val summary = getSessionSummary()
         val calculatedGrammar = summary.grammarScore
         val calculatedFluency = summary.fluencyScore
-        val calculatedPronunciation = summary.pronunciationScore
-        val calculatedVocabulary = summary.vocabularyScore
+        val calculatedPronunciation = if (summary.pronunciationScore > 0) summary.pronunciationScore else summary.fluencyScore
+        val calculatedVocabulary = if (summary.vocabularyScore > 0) (summary.vocabularyScore * 10).coerceIn(60, 95) else ((calculatedFluency + calculatedGrammar) / 2).coerceIn(60, 95)
         val strongest = if (calculatedPronunciation >= calculatedFluency) "Pronunciation" else "Fluency"
         val focus = if (summary.conceptsNeedingPractice.isNotEmpty()) {
             summary.conceptsNeedingPractice.first().replace('_', ' ').replaceFirstChar { it.uppercaseChar() }

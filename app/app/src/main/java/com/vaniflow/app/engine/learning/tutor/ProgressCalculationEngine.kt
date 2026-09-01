@@ -14,7 +14,8 @@ class ProgressCalculationEngine @Inject constructor() {
         profile: LearnerProfile,
         masteryList: List<MasteryState>
     ): EstimatedLevel {
-        if (profile.totalUtterances < 10) {
+        // Require at least 15 utterances across sessions before establishing higher CEFR levels
+        if (profile.totalUtterances < 15) {
             return profile.estimatedLevel
         }
 
@@ -61,6 +62,7 @@ class ProgressCalculationEngine @Inject constructor() {
         val corrections = events.filter { it.type == LearningEventType.CORRECTION }
         val successfulRetries = events.filter { it.type == LearningEventType.SUCCESSFUL_RETRY }
         val failedRetries = events.filter { it.type == LearningEventType.FAILED_RETRY }
+        val vocabLearned = events.filter { it.type == LearningEventType.VOCABULARY_LEARNED }.map { it.conceptId }.distinct()
 
         val improvedConcepts = events
             .filter { it.type == LearningEventType.SUCCESSFUL_RETRY || it.type == LearningEventType.MASTERY_GAIN }
@@ -75,13 +77,18 @@ class ProgressCalculationEngine @Inject constructor() {
         val cleanTurnRatio = if (userTurnsCount > 0) {
             ((userTurnsCount - corrections.size).toFloat() / userTurnsCount.toFloat()).coerceIn(0f, 1f)
         } else {
-            0.85f
+            1.0f
         }
 
+        // Evidence-based grammar & fluency scores
         val grammarScore = (cleanTurnRatio * 100).toInt().coerceIn(50, 100)
         val fluencyScore = ((speakingConfidence * 0.4f) + (cleanTurnRatio * 60f)).toInt().coerceIn(50, 100)
-        val pronunciationScore = (85 + (speakingConfidence * 0.1f)).toInt().coerceIn(75, 98)
-        val vocabularyScore = (78 + (userTurnsCount * 2)).coerceIn(65, 95)
+
+        val clarityRating = when {
+            cleanTurnRatio >= 0.85f -> "Natural"
+            cleanTurnRatio >= 0.65f -> "Clear"
+            else -> "Developing"
+        }
 
         val trend = when {
             successfulRetries.isNotEmpty() || cleanTurnRatio >= 0.8f -> "Improving"
@@ -98,11 +105,12 @@ class ProgressCalculationEngine @Inject constructor() {
             successfulRetriesCount = successfulRetries.size,
             conceptsMasteredOrImproved = improvedConcepts,
             conceptsNeedingPractice = weakConcepts,
-            newExpressionsLearned = emptyList(),
+            newExpressionsLearned = vocabLearned,
             fluencyScore = fluencyScore,
             grammarScore = grammarScore,
-            pronunciationScore = pronunciationScore,
-            vocabularyScore = vocabularyScore,
+            pronunciationScore = 0, // Not fabricated; 0 indicates unmeasured acoustic phonemes
+            vocabularyScore = vocabLearned.size,
+            clarityRating = clarityRating,
             confidenceTrend = trend
         )
     }

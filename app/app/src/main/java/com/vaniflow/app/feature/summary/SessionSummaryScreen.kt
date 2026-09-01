@@ -140,6 +140,12 @@ fun SessionSummaryScreen(
                         .padding(horizontal = 20.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
+                    ConceptsLearnedCard(
+                        improvedConcepts = uiState.improvedConcepts,
+                        expressions = uiState.learnedExpressions,
+                        successfulRetries = uiState.successfulRetriesCount
+                    )
+
                     StrongestAreaCard(
                         area = uiState.strongestArea,
                         description = "You expressed your ideas with natural clarity.",
@@ -448,6 +454,86 @@ private fun CircularScoreIndicator(
             fontWeight = FontWeight.Bold,
             color = textColor,
         )
+    }
+}
+
+@Composable
+private fun ConceptsLearnedCard(
+    improvedConcepts: List<String>,
+    expressions: List<String>,
+    successfulRetries: Int
+) {
+    if (improvedConcepts.isEmpty() && expressions.isEmpty() && successfulRetries == 0) return
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+        ),
+        border = BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "LEARNING OUTCOMES",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary,
+                letterSpacing = 1.sp,
+            )
+
+            if (improvedConcepts.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = "Concepts Improved:",
+                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold)
+                    )
+                    improvedConcepts.forEach { concept ->
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(text = "✓", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                            Text(text = concept, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                }
+            }
+
+            if (expressions.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = "Expressions Practiced:",
+                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold)
+                    )
+                    expressions.forEach { expr ->
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(text = "✨", style = MaterialTheme.typography.bodySmall)
+                            Text(text = "\"$expr\"", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium))
+                        }
+                    }
+                }
+            }
+
+            if (successfulRetries > 0) {
+                Text(
+                    text = "🎯 $successfulRetries mistake(s) successfully self-corrected during this session!",
+                    style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
+                )
+            }
+        }
     }
 }
 

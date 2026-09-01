@@ -18,7 +18,10 @@ data class HomeUiState(
     val selectedCharacter: Character? = null,
     val streakDays: Int = 0,
     val totalSpeakingMinutes: Int = 0,
-    val sessionsCount: Int = 0
+    val sessionsCount: Int = 0,
+    val aiCoachRecommendation: String = "Start your 5-minute daily conversation!",
+    val masteredCount: Int = 0,
+    val improvingConcept: String? = null
 ) {
     fun getSafeCharacter(registry: CharacterRegistry): Character {
         return selectedCharacter ?: registry.characters.first()
@@ -48,11 +51,15 @@ class HomeViewModel @Inject constructor(
                 progressRepository.getProgress()
             ) { characterId, progress ->
                 val char = characterRegistry.getCharacter(characterId)
+                val topWeak = progress.conceptsNeedingPractice.firstOrNull()?.replace('_', ' ')?.replaceFirstChar { it.uppercaseChar() }
                 HomeUiState(
                     selectedCharacter = char,
                     streakDays = progress.currentStreak,
                     totalSpeakingMinutes = progress.totalMinutes,
-                    sessionsCount = progress.sessionCount
+                    sessionsCount = progress.sessionCount,
+                    aiCoachRecommendation = progress.aiCoachRecommendation,
+                    masteredCount = progress.masteredConceptsCount,
+                    improvingConcept = topWeak
                 )
             }.collect { newState ->
                 _uiState.value = newState

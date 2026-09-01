@@ -38,6 +38,21 @@ class ProgressCalculationEngineTest {
     }
 
     @Test
+    fun `estimateCefrLevel preserves baseline level when utterances are below 15`() {
+        val profile = LearnerProfile(
+            estimatedLevel = EstimatedLevel.A1,
+            speakingConfidenceScore = 95f,
+            totalUtterances = 8,
+            correctionsDelivered = 0,
+            successfulRetries = 0
+        )
+
+        val estimated = engine.estimateCefrLevel(profile, emptyList())
+        assertEquals("Should preserve baseline A1 until at least 15 utterances provide sufficient evidence",
+            EstimatedLevel.A1, estimated)
+    }
+
+    @Test
     fun `generateSessionSummary reflects actual session learning events`() {
         val events = listOf(
             LearningEvent(
@@ -59,6 +74,16 @@ class ProgressCalculationEngineTest {
                 correctedForm = "bought",
                 isSuccess = true,
                 sessionId = "test_session_1"
+            ),
+            LearningEvent(
+                type = LearningEventType.VOCABULARY_LEARNED,
+                conceptId = "looking forward to",
+                category = EnglishErrorCategory.VOCABULARY,
+                severity = CorrectionSeverity.STYLE,
+                originalUtterance = "I am looking forward to it",
+                correctedForm = "looking forward to",
+                isSuccess = true,
+                sessionId = "test_session_1"
             )
         )
 
@@ -76,6 +101,8 @@ class ProgressCalculationEngineTest {
         assertEquals(1, summary.correctionsCount)
         assertEquals(1, summary.successfulRetriesCount)
         assertTrue(summary.conceptsMasteredOrImproved.contains("past_buyed"))
+        assertTrue(summary.newExpressionsLearned.contains("looking forward to"))
         assertEquals("Improving", summary.confidenceTrend)
+        assertEquals("Natural", summary.clarityRating)
     }
 }

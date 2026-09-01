@@ -26,7 +26,13 @@ data class ProgressUiState(
     val averagePronunciation: Int = 0,
     val averageVocabulary: Int = 0,
     val improvements: List<ImprovementStat> = emptyList(),
-    val aiCoachRecommendation: String = "Practice a 5-minute conversation today!"
+    val aiCoachRecommendation: String = "Practice a 5-minute conversation today!",
+    val estimatedLevel: String = "Building level...",
+    val speakingConfidenceScore: Float = 65.0f,
+    val masteredConceptsCount: Int = 0,
+    val conceptsNeedingPracticeCount: Int = 0,
+    val vocabularyCount: Int = 0,
+    val conceptsNeedingPractice: List<String> = emptyList()
 )
 
 @HiltViewModel
@@ -57,7 +63,13 @@ class ProgressViewModel @Inject constructor(
                         averagePronunciation = data.averagePronunciation,
                         averageVocabulary = data.averageVocabulary,
                         improvements = data.improvements,
-                        aiCoachRecommendation = data.aiCoachRecommendation
+                        aiCoachRecommendation = data.aiCoachRecommendation,
+                        estimatedLevel = data.estimatedLevel,
+                        speakingConfidenceScore = data.speakingConfidenceScore,
+                        masteredConceptsCount = data.masteredConceptsCount,
+                        conceptsNeedingPracticeCount = data.conceptsNeedingPracticeCount,
+                        vocabularyCount = data.vocabularyCount,
+                        conceptsNeedingPractice = data.conceptsNeedingPractice
                     )
                 }
             }

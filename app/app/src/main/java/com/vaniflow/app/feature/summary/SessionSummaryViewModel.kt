@@ -3,7 +3,9 @@ package com.vaniflow.app.feature.summary
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vaniflow.app.domain.repository.LearningEventRepository
 import com.vaniflow.app.domain.repository.SessionRepository
+import com.vaniflow.app.engine.learning.tutor.model.LearningEventType
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,14 +22,20 @@ data class SessionSummaryUiState(
     val grammarScore: Int = 0,
     val pronunciationScore: Int = 0,
     val vocabularyScore: Int = 0,
-    val strongestArea: String = "Pronunciation",
-    val focusNext: String = "Past Tense",
-    val focusNextExplanation: String = "Practice using past tense verbs when sharing experiences."
+    val strongestArea: String = "Speaking Fluency",
+    val focusNext: String = "Natural Phrasing",
+    val focusNextExplanation: String = "Practice using natural phrasing in upcoming conversations.",
+    val successfulRetriesCount: Int = 0,
+    val correctionsCount: Int = 0,
+    val improvedConcepts: List<String> = emptyList(),
+    val weakConcepts: List<String> = emptyList(),
+    val learnedExpressions: List<String> = emptyList()
 )
 
 @HiltViewModel
 class SessionSummaryViewModel @Inject constructor(
     private val sessionRepository: SessionRepository,
+    private val learningEventRepository: LearningEventRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -47,6 +55,24 @@ class SessionSummaryViewModel @Inject constructor(
                 return@launch
             }
 
+            val events = try {
+                learningEventRepository.getEventsForSession(sessionId)
+            } catch (_: Exception) {
+                emptyList()
+            }
+
+            val successfulRetries = events.count { it.type == LearningEventType.SUCCESSFUL_RETRY }
+            val corrections = events.count { it.type == LearningEventType.CORRECTION }
+            val improved = events.filter { it.type == LearningEventType.SUCCESSFUL_RETRY || it.type == LearningEventType.MASTERY_GAIN }
+                .map { it.conceptId.replace('_', ' ').replaceFirstChar { c -> c.uppercaseChar() } }
+                .distinct()
+            val weak = events.filter { it.type == LearningEventType.FAILED_RETRY || it.type == LearningEventType.CORRECTION }
+                .map { it.conceptId.replace('_', ' ').replaceFirstChar { c -> c.uppercaseChar() } }
+                .distinct()
+            val expressions = events.filter { it.type == LearningEventType.VOCABULARY_LEARNED }
+                .map { it.conceptId }
+                .distinct()
+
             sessionRepository.getSessionById(sessionId).collect { session ->
                 if (session != null) {
                     _uiState.update {
@@ -59,11 +85,25 @@ class SessionSummaryViewModel @Inject constructor(
                             vocabularyScore = session.vocabularyScore,
                             strongestArea = session.strongestArea,
                             focusNext = session.focusNext,
-                            focusNextExplanation = "Focus on practicing ${session.focusNext.lowercase()} in your upcoming sessions."
+                            focusNextExplanation = "Focus on practicing ${session.focusNext.lowercase()} in your upcoming sessions.",
+                            successfulRetriesCount = successfulRetries,
+                            correctionsCount = corrections,
+                            improvedConcepts = improved,
+                            weakConcepts = weak,
+                            learnedExpressions = expressions
                         )
                     }
                 } else {
-                    _uiState.update { it.copy(isLoading = false) }
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            successfulRetriesCount = successfulRetries,
+                            correctionsCount = corrections,
+                            improvedConcepts = improved,
+                            weakConcepts = weak,
+                            learnedExpressions = expressions
+                        )
+                    }
                 }
             }
         }

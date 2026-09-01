@@ -27,7 +27,13 @@ data class ProgressData(
     val averagePronunciation: Int,
     val averageVocabulary: Int,
     val improvements: List<ImprovementStat>,
-    val aiCoachRecommendation: String
+    val aiCoachRecommendation: String,
+    val estimatedLevel: String = "Building level...",
+    val speakingConfidenceScore: Float = 65.0f,
+    val masteredConceptsCount: Int = 0,
+    val conceptsNeedingPracticeCount: Int = 0,
+    val vocabularyCount: Int = 0,
+    val conceptsNeedingPractice: List<String> = emptyList()
 )
 
 interface ProgressRepository {

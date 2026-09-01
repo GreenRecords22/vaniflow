@@ -12,7 +12,8 @@ data class SessionLearningSummary(
     val newExpressionsLearned: List<String>,
     val fluencyScore: Int,
     val grammarScore: Int,
-    val pronunciationScore: Int,
-    val vocabularyScore: Int,
-    val confidenceTrend: String // "Improving", "Steady", "Developing"
+    val pronunciationScore: Int = 0,
+    val vocabularyScore: Int = 0,
+    val clarityRating: String = "Clear", // "Clear", "Developing", "Natural"
+    val confidenceTrend: String = "Steady" // "Improving", "Steady", "Developing"
 )
