@@ -24,6 +24,8 @@ import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Celebration
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
@@ -60,8 +62,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 /**
  * Session Summary Screen composable.
  *
- * Displays conversation performance metrics, fluency/grammar scores,
- * feedback highlights, and next practice actions matching Stitch design.
+ * Displays conversation performance metrics, real speech pacing insights,
+ * pronunciation evidence status, feedback highlights, and next practice actions.
  */
 @Composable
 fun SessionSummaryScreen(
@@ -76,8 +78,8 @@ fun SessionSummaryScreen(
     val displaySpeakingTime = if (uiState.speakingTimeMinutes > 0) "${uiState.speakingTimeMinutes}m" else "1m"
     val displayFluency = if (uiState.fluencyScore > 0) uiState.fluencyScore else 80
     val displayGrammar = if (uiState.grammarScore > 0) uiState.grammarScore else 85
-    val displayPronunciation = if (uiState.pronunciationScore > 0) uiState.pronunciationScore else 90
-    val displayVocabulary = if (uiState.vocabularyScore > 0) uiState.vocabularyScore else 78
+    val displayPronunciation = if (uiState.pronunciationScore > 0) uiState.pronunciationScore else 0
+    val displayVocabulary = if (uiState.vocabularyScore > 0) uiState.vocabularyScore else uiState.learnedExpressions.size
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -124,12 +126,27 @@ fun SessionSummaryScreen(
                     fluencyScore = displayFluency,
                     grammarScore = displayGrammar,
                     pronunciationScore = displayPronunciation,
-                    vocabularyScore = displayVocabulary,
+                    pronunciationState = uiState.pronunciationState,
+                    vocabularyCount = displayVocabulary,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp),
                 )
                 Spacer(modifier = Modifier.height(20.dp))
+            }
+
+            // Speech & Pronunciation Intelligence Insights Card
+            item {
+                SpeechInsightsCard(
+                    pronunciationState = uiState.pronunciationState,
+                    wpm = uiState.averageWordsPerMinute,
+                    pauses = uiState.totalPausesCount,
+                    practicedSounds = uiState.practicedSounds,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
             }
 
             // Feedback Highlights: Strongest Area & Focus Next
@@ -312,7 +329,8 @@ private fun ScoresGrid(
     fluencyScore: Int,
     grammarScore: Int,
     pronunciationScore: Int,
-    vocabularyScore: Int,
+    pronunciationState: String,
+    vocabularyCount: Int,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -341,18 +359,115 @@ private fun ScoresGrid(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            val pronDisplay = if (pronunciationScore > 0) "$pronunciationScore%" else if (pronunciationState.contains("Natural")) "Natural" else if (pronunciationState.contains("Clear")) "Clear" else "State"
+            val pronProgress = if (pronunciationScore > 0) pronunciationScore / 100f else if (pronunciationState.contains("Natural") || pronunciationState.contains("Clear")) 0.85f else 0.5f
+
             ScoreProgressCard(
                 title = "PRONUNCIATION",
-                displayValue = "$pronunciationScore%",
-                progress = pronunciationScore / 100f,
+                displayValue = pronDisplay,
+                progress = pronProgress,
                 modifier = Modifier.weight(1f),
             )
             ScoreProgressCard(
-                title = "VOCABULARY",
-                displayValue = "$vocabularyScore%",
-                progress = vocabularyScore / 100f,
+                title = "EXPRESSIONS",
+                displayValue = "$vocabularyCount",
+                progress = if (vocabularyCount > 0) (vocabularyCount / 5f).coerceIn(0.2f, 1f) else 0.2f,
                 modifier = Modifier.weight(1f),
             )
+        }
+    }
+}
+
+/**
+ * Speech and Pronunciation Intelligence card showing genuine acoustic signals.
+ */
+@Composable
+private fun SpeechInsightsCard(
+    pronunciationState: String,
+    wpm: Int,
+    pauses: Int,
+    practicedSounds: List<String>,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+        ),
+        border = BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.GraphicEq,
+                    contentDescription = "Speech Insights",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+                Text(
+                    text = "SPEECH & PRONUNCIATION",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary,
+                    letterSpacing = 1.sp,
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "Pronunciation Status",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = pronunciationState,
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                }
+
+                if (wpm > 0) {
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = "Speaking Rate",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "$wpm WPM",
+                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+
+            if (practicedSounds.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "Practiced Speech Sounds: " + practicedSounds.joinToString(", "),
+                    style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                )
+            }
         }
     }
 }
@@ -677,41 +792,29 @@ private fun FocusNextCard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Action button to practice the focus area
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .clickable(onClick = onPracticeAction),
+            FilledTonalButton(
+                onClick = onPracticeAction,
+                modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
             ) {
-                Row(
-                    modifier = Modifier.padding(vertical = 12.dp, horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Bolt,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Practice $area for 5 minutes",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Filled.Bolt,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Practice $area",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                )
             }
         }
     }
 }
 
 /**
- * Bottom action buttons: Practice Again (primary) & Back to Home (secondary).
+ * Bottom action buttons: "Practice Again" (primary) + "Back to Home" (secondary).
  */
 @Composable
 private fun ActionButtons(
@@ -721,65 +824,44 @@ private fun ActionButtons(
 ) {
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Button(
             onClick = onPracticeAgain,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp),
-            shape = RoundedCornerShape(24.dp),
+                .height(52.dp),
+            shape = RoundedCornerShape(14.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
             ),
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Replay,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Practice Again",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
+            Icon(
+                imageVector = Icons.Filled.Replay,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Practice Again",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
         }
 
         FilledTonalButton(
             onClick = onBackToHome,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp),
-            shape = RoundedCornerShape(24.dp),
-            colors = ButtonDefaults.filledTonalButtonColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            ),
+                .height(52.dp),
+            shape = RoundedCornerShape(14.dp),
         ) {
             Text(
                 text = "Back to Home",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Medium,
             )
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun SessionSummaryScreenPreview() {
-    VaniFlowTheme {
-        SessionSummaryScreen(
-            sessionId = "session_123",
-            onPracticeAgain = {},
-            onBackToHome = {},
-        )
     }
 }

@@ -13,6 +13,7 @@ import com.vaniflow.app.data.local.db.dao.LearnerProfileDao
 import com.vaniflow.app.data.local.db.dao.LearningEventDao
 import com.vaniflow.app.data.local.db.dao.SavedVocabularyDao
 import com.vaniflow.app.data.local.db.dao.SessionDao
+import com.vaniflow.app.data.local.db.dao.SpeechAnalysisDao
 import com.vaniflow.app.data.local.db.dao.VocabularyMemoryDao
 import com.vaniflow.app.data.local.db.entity.AICacheEntity
 import com.vaniflow.app.data.local.db.entity.ConceptMasteryEntity
@@ -23,6 +24,7 @@ import com.vaniflow.app.data.local.db.entity.LearnerProfileEntity
 import com.vaniflow.app.data.local.db.entity.LearningEventEntity
 import com.vaniflow.app.data.local.db.entity.SavedVocabularyEntity
 import com.vaniflow.app.data.local.db.entity.SessionEntity
+import com.vaniflow.app.data.local.db.entity.SpeechAnalysisEntity
 import com.vaniflow.app.data.local.db.entity.VocabularyMemoryEntity
 
 @Database(
@@ -36,9 +38,10 @@ import com.vaniflow.app.data.local.db.entity.VocabularyMemoryEntity
         DailyUsageEntity::class,
         LearningEventEntity::class,
         ConceptMasteryEntity::class,
-        VocabularyMemoryEntity::class
+        VocabularyMemoryEntity::class,
+        SpeechAnalysisEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class VaniFlowDatabase : RoomDatabase() {
@@ -52,6 +55,7 @@ abstract class VaniFlowDatabase : RoomDatabase() {
     abstract fun learningEventDao(): LearningEventDao
     abstract fun conceptMasteryDao(): ConceptMasteryDao
     abstract fun vocabularyMemoryDao(): VocabularyMemoryDao
+    abstract fun speechAnalysisDao(): SpeechAnalysisDao
 
     companion object {
         val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -143,6 +147,33 @@ abstract class VaniFlowDatabase : RoomDatabase() {
                         `usageCount` INTEGER NOT NULL,
                         `lastUsedEpochMs` INTEGER NOT NULL,
                         `sourceScenarioId` TEXT,
+                        PRIMARY KEY(`id`)
+                    )
+                    """.trimIndent()
+                )
+            }
+        }
+
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `speech_analysis` (
+                        `id` TEXT NOT NULL,
+                        `turnId` TEXT NOT NULL,
+                        `sessionId` TEXT NOT NULL,
+                        `audioDurationMs` INTEGER NOT NULL,
+                        `voicedDurationMs` INTEGER NOT NULL,
+                        `pauseCount` INTEGER NOT NULL,
+                        `totalPauseDurationMs` INTEGER NOT NULL,
+                        `wordsPerMinute` REAL NOT NULL,
+                        `qualitativeFluency` TEXT NOT NULL,
+                        `qualitativePronunciation` TEXT NOT NULL,
+                        `hesitationType` TEXT NOT NULL,
+                        `snrDb` REAL NOT NULL,
+                        `hasPhonemeEvidence` INTEGER NOT NULL,
+                        `practicedSound` TEXT,
+                        `timestampEpochMs` INTEGER NOT NULL,
                         PRIMARY KEY(`id`)
                     )
                     """.trimIndent()

@@ -2,9 +2,11 @@ package com.vaniflow.app.di
 
 import com.vaniflow.app.data.repository.DefaultProgressRepository
 import com.vaniflow.app.data.repository.DefaultSessionRepository
+import com.vaniflow.app.data.repository.DefaultSpeechAnalysisRepository
 import com.vaniflow.app.data.repository.DefaultVocabularyRepository
 import com.vaniflow.app.domain.repository.ProgressRepository
 import com.vaniflow.app.domain.repository.SessionRepository
+import com.vaniflow.app.domain.repository.SpeechAnalysisRepository
 import com.vaniflow.app.domain.repository.VocabularyRepository
 import dagger.Binds
 import dagger.Module
@@ -51,4 +53,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindVocabularyMemoryRepository(defaultVocabularyMemoryRepository: com.vaniflow.app.data.repository.DefaultVocabularyMemoryRepository): com.vaniflow.app.domain.repository.VocabularyMemoryRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindSpeechAnalysisRepository(defaultSpeechAnalysisRepository: DefaultSpeechAnalysisRepository): SpeechAnalysisRepository
 }

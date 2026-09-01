@@ -9,6 +9,7 @@ import com.vaniflow.app.data.local.db.dao.ConversationTurnDao
 import com.vaniflow.app.data.local.db.dao.GuestProfileDao
 import com.vaniflow.app.data.local.db.dao.SavedVocabularyDao
 import com.vaniflow.app.data.local.db.dao.SessionDao
+import com.vaniflow.app.data.local.db.dao.SpeechAnalysisDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.components.SingletonComponent
@@ -83,5 +84,10 @@ object TestDatabaseModule {
     @Provides
     fun provideVocabularyMemoryDao(database: VaniFlowDatabase): com.vaniflow.app.data.local.db.dao.VocabularyMemoryDao {
         return database.vocabularyMemoryDao()
+    }
+
+    @Provides
+    fun provideSpeechAnalysisDao(database: VaniFlowDatabase): SpeechAnalysisDao {
+        return database.speechAnalysisDao()
     }
 }

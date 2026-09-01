@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vaniflow.app.domain.repository.LearningEventRepository
 import com.vaniflow.app.domain.repository.SessionRepository
+import com.vaniflow.app.domain.repository.SpeechAnalysisRepository
 import com.vaniflow.app.engine.learning.tutor.model.LearningEventType
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,13 +30,18 @@ data class SessionSummaryUiState(
     val correctionsCount: Int = 0,
     val improvedConcepts: List<String> = emptyList(),
     val weakConcepts: List<String> = emptyList(),
-    val learnedExpressions: List<String> = emptyList()
+    val learnedExpressions: List<String> = emptyList(),
+    val pronunciationState: String = "Not enough evidence yet",
+    val averageWordsPerMinute: Int = 0,
+    val totalPausesCount: Int = 0,
+    val practicedSounds: List<String> = emptyList()
 )
 
 @HiltViewModel
 class SessionSummaryViewModel @Inject constructor(
     private val sessionRepository: SessionRepository,
     private val learningEventRepository: LearningEventRepository,
+    private val speechAnalysisRepository: SpeechAnalysisRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -61,9 +67,15 @@ class SessionSummaryViewModel @Inject constructor(
                 emptyList()
             }
 
+            val speechAnalyses = try {
+                speechAnalysisRepository.getSpeechAnalysisForSession(sessionId)
+            } catch (_: Exception) {
+                emptyList()
+            }
+
             val successfulRetries = events.count { it.type == LearningEventType.SUCCESSFUL_RETRY }
             val corrections = events.count { it.type == LearningEventType.CORRECTION }
-            val improved = events.filter { it.type == LearningEventType.SUCCESSFUL_RETRY || it.type == LearningEventType.MASTERY_GAIN }
+            val improved = events.filter { it.type == LearningEventType.SUCCESSFUL_RETRY || it.type == LearningEventType.MASTERY_GAIN || it.type == LearningEventType.PRONUNCIATION_IMPROVEMENT }
                 .map { it.conceptId.replace('_', ' ').replaceFirstChar { c -> c.uppercaseChar() } }
                 .distinct()
             val weak = events.filter { it.type == LearningEventType.FAILED_RETRY || it.type == LearningEventType.CORRECTION }
@@ -72,6 +84,24 @@ class SessionSummaryViewModel @Inject constructor(
             val expressions = events.filter { it.type == LearningEventType.VOCABULARY_LEARNED }
                 .map { it.conceptId }
                 .distinct()
+
+            val totalPauses = speechAnalyses.sumOf { it.pauseCount }
+            val avgWpm = if (speechAnalyses.isNotEmpty()) {
+                val nonZero = speechAnalyses.filter { it.wordsPerMinute > 0 }
+                if (nonZero.isNotEmpty()) nonZero.map { it.wordsPerMinute }.average().toInt() else 0
+            } else 0
+
+            val practicedSounds = speechAnalyses
+                .mapNotNull { it.practicedSound }
+                .distinct()
+                .map { it.replace('_', ' ').replaceFirstChar { c -> c.uppercaseChar() } }
+
+            val pronState = when {
+                speechAnalyses.isEmpty() || speechAnalyses.none { it.hasPhonemeEvidence } -> "Not enough evidence yet"
+                speechAnalyses.any { it.qualitativePronunciation == "NATURAL" } -> "Natural Pronunciation"
+                speechAnalyses.any { it.qualitativePronunciation == "CLEAR" } -> "Clear Pronunciation"
+                else -> "Developing Clarity"
+            }
 
             sessionRepository.getSessionById(sessionId).collect { session ->
                 if (session != null) {
@@ -90,7 +120,11 @@ class SessionSummaryViewModel @Inject constructor(
                             correctionsCount = corrections,
                             improvedConcepts = improved,
                             weakConcepts = weak,
-                            learnedExpressions = expressions
+                            learnedExpressions = expressions,
+                            pronunciationState = pronState,
+                            averageWordsPerMinute = avgWpm,
+                            totalPausesCount = totalPauses,
+                            practicedSounds = practicedSounds
                         )
                     }
                 } else {
@@ -101,7 +135,11 @@ class SessionSummaryViewModel @Inject constructor(
                             correctionsCount = corrections,
                             improvedConcepts = improved,
                             weakConcepts = weak,
-                            learnedExpressions = expressions
+                            learnedExpressions = expressions,
+                            pronunciationState = pronState,
+                            averageWordsPerMinute = avgWpm,
+                            totalPausesCount = totalPauses,
+                            practicedSounds = practicedSounds
                         )
                     }
                 }

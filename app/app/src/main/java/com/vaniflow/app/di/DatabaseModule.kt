@@ -12,6 +12,7 @@ import com.vaniflow.app.data.local.db.dao.LearnerProfileDao
 import com.vaniflow.app.data.local.db.dao.LearningEventDao
 import com.vaniflow.app.data.local.db.dao.SavedVocabularyDao
 import com.vaniflow.app.data.local.db.dao.SessionDao
+import com.vaniflow.app.data.local.db.dao.SpeechAnalysisDao
 import com.vaniflow.app.data.local.db.dao.VocabularyMemoryDao
 import dagger.Module
 import dagger.Provides
@@ -32,7 +33,11 @@ object DatabaseModule {
             VaniFlowDatabase::class.java,
             "vaniflow.db"
         )
-            .addMigrations(VaniFlowDatabase.MIGRATION_1_2, VaniFlowDatabase.MIGRATION_2_3)
+            .addMigrations(
+                VaniFlowDatabase.MIGRATION_1_2,
+                VaniFlowDatabase.MIGRATION_2_3,
+                VaniFlowDatabase.MIGRATION_3_4
+            )
             .fallbackToDestructiveMigration()
             .build()
     }
@@ -85,5 +90,10 @@ object DatabaseModule {
     @Provides
     fun provideVocabularyMemoryDao(database: VaniFlowDatabase): VocabularyMemoryDao {
         return database.vocabularyMemoryDao()
+    }
+
+    @Provides
+    fun provideSpeechAnalysisDao(database: VaniFlowDatabase): SpeechAnalysisDao {
+        return database.speechAnalysisDao()
     }
 }

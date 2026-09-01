@@ -4,6 +4,7 @@ import com.vaniflow.app.engine.learning.tutor.model.LearningEvent
 import com.vaniflow.app.engine.learning.tutor.model.LearningEventType
 import com.vaniflow.app.engine.learning.tutor.model.MasteryState
 import com.vaniflow.app.engine.learning.tutor.model.SessionLearningSummary
+import com.vaniflow.app.engine.speech.model.PronunciationEvidence
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -54,7 +55,8 @@ class ProgressCalculationEngine @Inject constructor() {
         sessionDurationMs: Long,
         userTurnsCount: Int,
         events: List<LearningEvent>,
-        speakingConfidence: Float
+        speakingConfidence: Float,
+        speechEvidences: List<PronunciationEvidence> = emptyList()
     ): SessionLearningSummary {
         val durationSeconds = sessionDurationMs / 1000L
         val speakingMinutes = (durationSeconds / 60).toInt().coerceAtLeast(1)
@@ -65,7 +67,7 @@ class ProgressCalculationEngine @Inject constructor() {
         val vocabLearned = events.filter { it.type == LearningEventType.VOCABULARY_LEARNED }.map { it.conceptId }.distinct()
 
         val improvedConcepts = events
-            .filter { it.type == LearningEventType.SUCCESSFUL_RETRY || it.type == LearningEventType.MASTERY_GAIN }
+            .filter { it.type == LearningEventType.SUCCESSFUL_RETRY || it.type == LearningEventType.MASTERY_GAIN || it.type == LearningEventType.PRONUNCIATION_IMPROVEMENT }
             .map { it.conceptId }
             .distinct()
 
@@ -84,8 +86,30 @@ class ProgressCalculationEngine @Inject constructor() {
         val grammarScore = (cleanTurnRatio * 100).toInt().coerceIn(50, 100)
         val fluencyScore = ((speakingConfidence * 0.4f) + (cleanTurnRatio * 60f)).toInt().coerceIn(50, 100)
 
+        // Real Speech Insights
+        val validSpeechEvidences = speechEvidences.filter { it.phonemeEvidenceAvailable }
+        val totalPauses = speechEvidences.sumOf { it.pauseCount }
+        val avgWpm = if (speechEvidences.isNotEmpty()) {
+            val nonZeroWpm = speechEvidences.filter { it.speakingRateWpm > 0 }
+            if (nonZeroWpm.isNotEmpty()) nonZeroWpm.map { it.speakingRateWpm }.average().toFloat() else 0f
+        } else {
+            0f
+        }
+
+        val practiceAreas = speechEvidences
+            .flatMap { it.observedPhonemePatterns }
+            .distinct()
+            .map { it.replace('_', ' ').replaceFirstChar { c -> c.uppercaseChar() } }
+
+        val pronunciationState = when {
+            validSpeechEvidences.isEmpty() -> "Not enough evidence yet"
+            validSpeechEvidences.all { it.qualitativeRating.name == "NATURAL" } -> "Natural Pronunciation"
+            validSpeechEvidences.any { it.qualitativeRating.name == "CLEAR" || it.qualitativeRating.name == "NATURAL" } -> "Clear Pronunciation"
+            else -> "Developing Clarity"
+        }
+
         val clarityRating = when {
-            cleanTurnRatio >= 0.85f -> "Natural"
+            cleanTurnRatio >= 0.85f && !pronunciationState.contains("Developing") -> "Natural"
             cleanTurnRatio >= 0.65f -> "Clear"
             else -> "Developing"
         }
@@ -108,10 +132,14 @@ class ProgressCalculationEngine @Inject constructor() {
             newExpressionsLearned = vocabLearned,
             fluencyScore = fluencyScore,
             grammarScore = grammarScore,
-            pronunciationScore = 0, // Not fabricated; 0 indicates unmeasured acoustic phonemes
+            pronunciationScore = 0, // Truthful: 0 denotes unmeasured acoustic percentage
             vocabularyScore = vocabLearned.size,
             clarityRating = clarityRating,
-            confidenceTrend = trend
+            confidenceTrend = trend,
+            pronunciationEvidenceState = pronunciationState,
+            pronunciationPracticeAreas = practiceAreas,
+            averageWordsPerMinute = avgWpm,
+            pauseCount = totalPauses
         )
     }
 }

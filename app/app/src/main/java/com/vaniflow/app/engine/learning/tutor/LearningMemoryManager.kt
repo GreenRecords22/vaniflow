@@ -1,9 +1,11 @@
 package com.vaniflow.app.engine.learning.tutor
 
+import com.vaniflow.app.data.local.db.entity.SpeechAnalysisEntity
 import com.vaniflow.app.domain.model.Scenario
 import com.vaniflow.app.domain.repository.ConceptMasteryRepository
 import com.vaniflow.app.domain.repository.LearnerProfileRepository
 import com.vaniflow.app.domain.repository.LearningEventRepository
+import com.vaniflow.app.domain.repository.SpeechAnalysisRepository
 import com.vaniflow.app.domain.repository.VocabularyMemoryRepository
 import com.vaniflow.app.engine.learning.tutor.model.CorrectionPolicyState
 import com.vaniflow.app.engine.learning.tutor.model.DifficultyLevel
@@ -13,10 +15,17 @@ import com.vaniflow.app.engine.learning.tutor.model.LearningGoal
 import com.vaniflow.app.engine.learning.tutor.model.MasteryState
 import com.vaniflow.app.engine.learning.tutor.model.SessionLearningSummary
 import com.vaniflow.app.engine.learning.tutor.model.VocabularyMemory
+import com.vaniflow.app.engine.speech.model.FluencyAnalysisResult
+import com.vaniflow.app.engine.speech.model.HesitationType
+import com.vaniflow.app.engine.speech.model.PronunciationEvidence
+import com.vaniflow.app.engine.speech.model.QualitativeFluencyRating
+import com.vaniflow.app.engine.speech.model.QualitativePronunciationRating
+import com.vaniflow.app.engine.speech.model.SpeechQualityResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import javax.inject.Inject
@@ -24,7 +33,7 @@ import javax.inject.Singleton
 
 /**
  * Manages long-term learner intelligence, concept mastery progression, adaptive difficulty,
- * learning goals, correction cooldowns, and personalized tutoring context.
+ * learning goals, correction cooldowns, speech quality & pronunciation evidence, and personalized tutoring context.
  */
 @Singleton
 class LearningMemoryManager @Inject constructor(
@@ -32,6 +41,7 @@ class LearningMemoryManager @Inject constructor(
     private val conceptMasteryRepository: ConceptMasteryRepository,
     private val learningEventRepository: LearningEventRepository,
     private val vocabularyMemoryRepository: VocabularyMemoryRepository,
+    private val speechAnalysisRepository: SpeechAnalysisRepository,
     val masteryEngine: MasteryEngine,
     val correctionPolicyEngine: CorrectionPolicyEngine,
     val difficultyEngine: DifficultyEngine,
@@ -70,6 +80,15 @@ class LearningMemoryManager @Inject constructor(
             override suspend fun deleteExpression(id: String) { list.removeIf { it.id == id } }
             override suspend fun clearAllVocabularyMemory() { list.clear() }
         },
+        speechAnalysisRepository = object : SpeechAnalysisRepository {
+            private val list = CopyOnWriteArrayList<SpeechAnalysisEntity>()
+            override fun getAllSpeechAnalysisFlow() = kotlinx.coroutines.flow.flowOf(list.toList())
+            override suspend fun getSpeechAnalysisForSession(sessionId: String) = list.filter { it.sessionId == sessionId }
+            override suspend fun getSpeechAnalysisForTurn(turnId: String) = list.find { it.turnId == turnId }
+            override suspend fun recordSpeechAnalysis(entity: SpeechAnalysisEntity) { list.add(entity) }
+            override suspend fun recordAllSpeechAnalysis(list: List<SpeechAnalysisEntity>) { this.list.addAll(list) }
+            override suspend fun clearAllSpeechAnalysis() { list.clear() }
+        },
         masteryEngine = MasteryEngine(),
         correctionPolicyEngine = CorrectionPolicyEngine(),
         difficultyEngine = DifficultyEngine(),
@@ -103,6 +122,7 @@ class LearningMemoryManager @Inject constructor(
         private set
 
     private val sessionLearningEvents = CopyOnWriteArrayList<LearningEvent>()
+    private val sessionSpeechEvidences = CopyOnWriteArrayList<PronunciationEvidence>()
 
     private val initJob by lazy {
         scope.launch {
@@ -154,6 +174,7 @@ class LearningMemoryManager @Inject constructor(
 
     fun startSession(scenario: Scenario, sessionId: String) {
         sessionLearningEvents.clear()
+        sessionSpeechEvidences.clear()
         policyState.consecutiveErrorsCount = 0
         policyState.consecutiveSuccessfulTurns = 0
         policyState.isStruggleBackoffActive = false
@@ -186,6 +207,83 @@ class LearningMemoryManager @Inject constructor(
             policyState = policyState,
             speakingConfidence = profile.speakingConfidenceScore
         )
+    }
+
+    fun onSpeechTurnAnalyzed(
+        quality: SpeechQualityResult,
+        fluency: FluencyAnalysisResult,
+        pronunciation: PronunciationEvidence,
+        sessionId: String,
+        turnId: String
+    ) {
+        sessionSpeechEvidences.add(pronunciation)
+
+        // 1. Log Speech / Fluency Learning Event if valid evidence exists
+        if (quality.isSignalUsable) {
+            if (pronunciation.phonemeEvidenceAvailable && pronunciation.observedPhonemePatterns.isNotEmpty()) {
+                for (sound in pronunciation.observedPhonemePatterns) {
+                    val isGoodClarity = pronunciation.qualitativeRating == QualitativePronunciationRating.CLEAR ||
+                        pronunciation.qualitativeRating == QualitativePronunciationRating.NATURAL
+
+                    val eventType = if (isGoodClarity) {
+                        LearningEventType.PRONUNCIATION_IMPROVEMENT
+                    } else {
+                        LearningEventType.PRONUNCIATION_OBSERVED
+                    }
+
+                    val speechEvent = LearningEvent(
+                        type = eventType,
+                        conceptId = sound,
+                        category = EnglishErrorCategory.FLUENCY_FILLER,
+                        severity = if (isGoodClarity) CorrectionSeverity.STYLE else CorrectionSeverity.MINOR,
+                        originalUtterance = pronunciation.transcript,
+                        isSuccess = isGoodClarity,
+                        sessionId = sessionId,
+                        confidenceImpact = if (isGoodClarity) 1.0f else 0.0f
+                    )
+                    sessionLearningEvents.add(speechEvent)
+                    persistEventAsync(speechEvent)
+                }
+            }
+
+            if (fluency.hesitationType == HesitationType.LONG_HESITATION || fluency.hesitationType == HesitationType.REPEATED_HESITATION) {
+                val fluencyEvent = LearningEvent(
+                    type = LearningEventType.FLUENCY_OBSERVED,
+                    conceptId = "hesitation_pacing",
+                    category = EnglishErrorCategory.FLUENCY_FILLER,
+                    severity = CorrectionSeverity.STYLE,
+                    originalUtterance = pronunciation.transcript,
+                    isSuccess = false,
+                    sessionId = sessionId,
+                    confidenceImpact = 0f
+                )
+                sessionLearningEvents.add(fluencyEvent)
+                persistEventAsync(fluencyEvent)
+            }
+        }
+
+        // 2. Persist SpeechAnalysisEntity to Room database
+        val entity = SpeechAnalysisEntity(
+            id = UUID.randomUUID().toString(),
+            turnId = turnId,
+            sessionId = sessionId,
+            audioDurationMs = fluency.totalDurationMs,
+            voicedDurationMs = fluency.voicedDurationMs,
+            pauseCount = fluency.pauseCount,
+            totalPauseDurationMs = fluency.totalPauseDurationMs,
+            wordsPerMinute = fluency.wordsPerMinute,
+            qualitativeFluency = fluency.qualitativeRating.name,
+            qualitativePronunciation = pronunciation.qualitativeRating.name,
+            hesitationType = fluency.hesitationType.name,
+            snrDb = quality.snrDb,
+            hasPhonemeEvidence = pronunciation.phonemeEvidenceAvailable,
+            practicedSound = pronunciation.observedPhonemePatterns.firstOrNull()
+        )
+        scope.launch {
+            try {
+                speechAnalysisRepository.recordSpeechAnalysis(entity)
+            } catch (_: Exception) {}
+        }
     }
 
     fun onUtteranceAnalyzed(
@@ -418,7 +516,8 @@ class LearningMemoryManager @Inject constructor(
             sessionDurationMs = sessionDurationMs,
             userTurnsCount = userTurnsCount,
             events = sessionLearningEvents.toList(),
-            speakingConfidence = profile.speakingConfidenceScore
+            speakingConfidence = profile.speakingConfidenceScore,
+            speechEvidences = sessionSpeechEvidences.toList()
         )
     }
 
@@ -448,6 +547,17 @@ class LearningMemoryManager @Inject constructor(
             ""
         }
 
+        val speechDirective = if (sessionSpeechEvidences.isNotEmpty()) {
+            val lastEv = sessionSpeechEvidences.last()
+            if (lastEv.practiceSoundSuggestion != null) {
+                "Speech Guidance: ${lastEv.practiceSoundSuggestion}"
+            } else {
+                "Speech Guidance: Encourage comfortable pacing and natural pauses."
+            }
+        } else {
+            "Speech Guidance: Maintain natural conversational rhythm."
+        }
+
         return """
 [TUTORING CONTEXT]
 ${profile.getCompactSummary()}
@@ -455,6 +565,7 @@ Difficulty: ${currentDifficulty.displayLabel} (${currentDifficulty.targetSentenc
 $goalsText
 $vocabText
 Coaching Directive: $practiceSuggestion
+$speechDirective
 """.trimIndent()
     }
 }

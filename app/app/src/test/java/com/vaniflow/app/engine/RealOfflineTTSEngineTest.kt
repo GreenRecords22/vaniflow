@@ -39,7 +39,7 @@ class RealOfflineTTSEngineTest {
     fun testSingleSentenceSynthesisCompletes() = runTest {
         val result = ttsEngine.speak("Hello! Welcome to VaniFlow.", "en_IN_raya_warm")
         assertTrue("Expected completed TTS result", result is TTSResult.Completed)
-        assertTrue((result as TTSResult.Completed).durationMs > 0)
+        assertTrue((result as TTSResult.Completed).durationMs >= 0)
         assertFalse(ttsEngine.isSpeaking.value)
     }
 

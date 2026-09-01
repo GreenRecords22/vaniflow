@@ -32,7 +32,11 @@ data class ProgressUiState(
     val masteredConceptsCount: Int = 0,
     val conceptsNeedingPracticeCount: Int = 0,
     val vocabularyCount: Int = 0,
-    val conceptsNeedingPractice: List<String> = emptyList()
+    val conceptsNeedingPractice: List<String> = emptyList(),
+    val averageSpeakingRateWpm: Int = 0,
+    val pronunciationEvidenceState: String = "Building baseline...",
+    val pronunciationPracticeAreas: List<String> = emptyList(),
+    val speechConsistencyNote: String = "Natural Pacing"
 )
 
 @HiltViewModel
@@ -69,7 +73,11 @@ class ProgressViewModel @Inject constructor(
                         masteredConceptsCount = data.masteredConceptsCount,
                         conceptsNeedingPracticeCount = data.conceptsNeedingPracticeCount,
                         vocabularyCount = data.vocabularyCount,
-                        conceptsNeedingPractice = data.conceptsNeedingPractice
+                        conceptsNeedingPractice = data.conceptsNeedingPractice,
+                        averageSpeakingRateWpm = data.averageSpeakingRateWpm,
+                        pronunciationEvidenceState = data.pronunciationEvidenceState,
+                        pronunciationPracticeAreas = data.pronunciationPracticeAreas,
+                        speechConsistencyNote = data.speechConsistencyNote
                     )
                 }
             }

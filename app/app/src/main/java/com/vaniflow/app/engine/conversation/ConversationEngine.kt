@@ -27,6 +27,11 @@ import com.vaniflow.app.engine.learning.tutor.EnglishErrorCategory
 import com.vaniflow.app.engine.learning.tutor.LearnerProfile
 import com.vaniflow.app.engine.learning.tutor.LearningMemoryManager
 import com.vaniflow.app.engine.scenario.ScenarioPromptBuilder
+import com.vaniflow.app.engine.speech.FluencyAnalyzer
+import com.vaniflow.app.engine.speech.PronunciationAnalyzer
+import com.vaniflow.app.engine.speech.SpeechFeatureExtractor
+import com.vaniflow.app.engine.speech.SpeechQualityAnalyzer
+import com.vaniflow.app.engine.speech.model.SpeechAudioSegment
 import com.vaniflow.app.engine.tts.SentenceSplitter
 import com.vaniflow.app.engine.tts.TTSEngine
 import com.vaniflow.app.engine.tts.TTSResult
@@ -49,7 +54,7 @@ import javax.inject.Singleton
 /**
  * Production ConversationEngine orchestrating natural full-duplex hands-free voice loops
  * integrated with real-time English Speaking Tutor pedagogy, persistent learner memory,
- * and selective retry coaching.
+ * speech quality & pronunciation analysis, and selective retry coaching.
  */
 @Singleton
 class ConversationEngine private constructor(
@@ -59,6 +64,9 @@ class ConversationEngine private constructor(
     private val correctionEngine: EnglishCorrectionEngine,
     private val learningMemoryManager: LearningMemoryManager,
     private val usageTracker: DailyConversationUsageTracker,
+    val speechQualityAnalyzer: SpeechQualityAnalyzer,
+    val fluencyAnalyzer: FluencyAnalyzer,
+    val pronunciationAnalyzer: PronunciationAnalyzer,
     private val sessionDao: SessionDao?,
     private val conversationTurnDao: ConversationTurnDao?,
     private val learnerProfileRepository: LearnerProfileRepository?,
@@ -73,6 +81,9 @@ class ConversationEngine private constructor(
         correctionEngine: EnglishCorrectionEngine,
         learningMemoryManager: LearningMemoryManager,
         usageTracker: DailyConversationUsageTracker,
+        speechQualityAnalyzer: SpeechQualityAnalyzer,
+        fluencyAnalyzer: FluencyAnalyzer,
+        pronunciationAnalyzer: PronunciationAnalyzer,
         sessionDao: SessionDao,
         conversationTurnDao: ConversationTurnDao,
         learnerProfileRepository: LearnerProfileRepository,
@@ -84,6 +95,9 @@ class ConversationEngine private constructor(
         correctionEngine = correctionEngine,
         learningMemoryManager = learningMemoryManager,
         usageTracker = usageTracker,
+        speechQualityAnalyzer = speechQualityAnalyzer,
+        fluencyAnalyzer = fluencyAnalyzer,
+        pronunciationAnalyzer = pronunciationAnalyzer,
         sessionDao = sessionDao,
         conversationTurnDao = conversationTurnDao,
         learnerProfileRepository = learnerProfileRepository,
@@ -102,6 +116,9 @@ class ConversationEngine private constructor(
         correctionEngine = EnglishCorrectionEngine(),
         learningMemoryManager = LearningMemoryManager(),
         usageTracker = DailyConversationUsageTracker(),
+        speechQualityAnalyzer = SpeechQualityAnalyzer(SpeechFeatureExtractor()),
+        fluencyAnalyzer = FluencyAnalyzer(SpeechFeatureExtractor()),
+        pronunciationAnalyzer = PronunciationAnalyzer(SpeechFeatureExtractor(), SpeechQualityAnalyzer(SpeechFeatureExtractor())),
         sessionDao = null,
         conversationTurnDao = null,
         learnerProfileRepository = null,
@@ -122,6 +139,9 @@ class ConversationEngine private constructor(
         correctionEngine = correctionEngine,
         learningMemoryManager = learningMemoryManager,
         usageTracker = DailyConversationUsageTracker(),
+        speechQualityAnalyzer = SpeechQualityAnalyzer(SpeechFeatureExtractor()),
+        fluencyAnalyzer = FluencyAnalyzer(SpeechFeatureExtractor()),
+        pronunciationAnalyzer = PronunciationAnalyzer(SpeechFeatureExtractor(), SpeechQualityAnalyzer(SpeechFeatureExtractor())),
         sessionDao = null,
         conversationTurnDao = null,
         learnerProfileRepository = null,
@@ -290,7 +310,7 @@ class ConversationEngine private constructor(
         }
     }
 
-    suspend fun processUserUtterance(userText: String) {
+    suspend fun processUserUtterance(userText: String, audioSegment: SpeechAudioSegment? = null) {
         if (userText.isBlank()) {
             _state.value = ConversationState.LISTENING
             return
@@ -434,8 +454,9 @@ class ConversationEngine private constructor(
         }
 
         // 2. Add user turn with attached correction
+        val userTurnId = UUID.randomUUID().toString()
         val userTurn = ConversationTurn(
-            id = UUID.randomUUID().toString(),
+            id = userTurnId,
             sessionId = currentSessionId,
             speaker = ConversationTurn.Speaker.USER,
             text = userText,
@@ -445,7 +466,18 @@ class ConversationEngine private constructor(
         _turns.value = _turns.value + userTurn
         pruneEmptyAiTurns()
 
-        // 3. Intelligent Correction Decision: Check if error warrants spoken interruption + retry
+        // 3. Speech Quality, Fluency & Pronunciation Analysis
+        val segmentToAnalyze = audioSegment ?: run {
+            val wordCount = userText.split("\\s+".toRegex()).count { it.isNotBlank() }
+            val estMs = (wordCount * 450L).coerceIn(800L, 8000L)
+            SpeechAudioSegment(samples = ShortArray((estMs * 16).toInt()), durationMs = estMs)
+        }
+        val quality = speechQualityAnalyzer.analyze(segmentToAnalyze)
+        val fluency = fluencyAnalyzer.analyze(segmentToAnalyze, userText)
+        val pronunciation = pronunciationAnalyzer.analyze(segmentToAnalyze, userText, sessionId = currentSessionId, utteranceId = userTurnId)
+        learningMemoryManager.onSpeechTurnAnalyzed(quality, fluency, pronunciation, sessionId = currentSessionId, turnId = userTurnId)
+
+        // 4. Intelligent Correction Decision: Check if error warrants spoken interruption + retry
         if (shouldSpokenCorrect && decision.detectedErrors.isNotEmpty()) {
             val primaryErr = decision.detectedErrors.first()
             val correctedText = decision.correctedSentence ?: primaryErr.suggestedText
@@ -479,7 +511,7 @@ class ConversationEngine private constructor(
             return
         }
 
-        // 4. Normal AI Conversation Response Streaming
+        // 5. Normal AI Conversation Response Streaming
         val history = _turns.value.map { turn ->
             AITurn(
                 role = if (turn.speaker == ConversationTurn.Speaker.USER) AITurn.Role.USER else AITurn.Role.ASSISTANT,
