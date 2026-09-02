@@ -392,6 +392,7 @@ class ConversationEngine private constructor(
                 _errorMessage.value = "I couldn't play that response. Tap to retry."
                 _state.value = ConversationState.LISTENING
             }
+            activeGenerationJob = null
             return
         }
 
@@ -455,7 +456,10 @@ class ConversationEngine private constructor(
             isRetryActive = false,
             sessionDurationMs = if (sessionStartTimeMs > 0) System.currentTimeMillis() - sessionStartTimeMs else 0L,
             sessionTurnCount = _turns.value.count { it.speaker == ConversationTurn.Speaker.USER },
-            isFairUseExceeded = usageTracker.isFairUseExceeded()
+            isFairUseExceeded = usageTracker.isFairUseExceeded(),
+            latestQuality = quality,
+            latestFluency = fluency,
+            latestPronunciation = pronunciation
         )
         val tutorDecision = learningMemoryManager.evaluateTutorDecision(
             state = learnerState,
@@ -500,6 +504,7 @@ class ConversationEngine private constructor(
                 _errorMessage.value = "I couldn't play that response. Tap to retry."
                 _state.value = ConversationState.LISTENING
             }
+            activeGenerationJob = null
             return
         }
 
@@ -609,6 +614,8 @@ class ConversationEngine private constructor(
             }
         } catch (_: CancellationException) {
             _state.value = ConversationState.INTERRUPTED
+        } finally {
+            activeGenerationJob = null
         }
     }
 

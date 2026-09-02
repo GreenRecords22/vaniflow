@@ -18,9 +18,12 @@ import javax.inject.Singleton
  */
 @Singleton
 class TutorDecisionEngine @Inject constructor(
-    val correctionPolicyEngine: CorrectionPolicyEngine = CorrectionPolicyEngine(),
-    val difficultyEngine: DifficultyEngine = DifficultyEngine()
+    val correctionPolicyEngine: CorrectionPolicyEngine,
+    val difficultyEngine: DifficultyEngine
 ) {
+    // Secondary constructor for testing convenience
+    constructor() : this(CorrectionPolicyEngine(), DifficultyEngine())
+
 
     fun evaluateDecision(
         state: TutorLearnerState,
@@ -258,10 +261,18 @@ class TutorDecisionEngine @Inject constructor(
         // -------------------------------------------------------------
         // Priority 11: Normal Conversational Flow
         // -------------------------------------------------------------
-        val speechDirective = if (state.latestPronunciation?.practiceSoundSuggestion != null) {
-            "Speech Guidance: ${state.latestPronunciation.practiceSoundSuggestion}"
-        } else {
-            "Speech Guidance: Maintain natural conversational rhythm and comfortable pacing."
+        val hesitationDirective = if (state.latestFluency?.hesitationType == com.vaniflow.app.engine.speech.model.HesitationType.LONG_HESITATION ||
+            state.latestFluency?.hesitationType == com.vaniflow.app.engine.speech.model.HesitationType.REPEATED_HESITATION) {
+            "Learner is taking time to construct sentences; maintain patient, supportive conversational pacing."
+        } else null
+
+        val speechDirective = when {
+            state.latestPronunciation?.practiceSoundSuggestion != null ->
+                "Speech Guidance: ${state.latestPronunciation.practiceSoundSuggestion}"
+            hesitationDirective != null ->
+                "Speech Guidance: $hesitationDirective"
+            else ->
+                "Speech Guidance: Maintain natural conversational rhythm and comfortable pacing."
         }
 
         return TutorDecision(

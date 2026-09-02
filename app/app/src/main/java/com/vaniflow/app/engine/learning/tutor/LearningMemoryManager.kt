@@ -46,7 +46,8 @@ class LearningMemoryManager @Inject constructor(
     val correctionPolicyEngine: CorrectionPolicyEngine,
     val difficultyEngine: DifficultyEngine,
     val learningGoalGenerator: LearningGoalGenerator,
-    val progressCalculationEngine: ProgressCalculationEngine
+    val progressCalculationEngine: ProgressCalculationEngine,
+    val tutorDecisionEngine: TutorDecisionEngine
 ) {
     // Secondary constructor for standalone unit tests
     constructor(
@@ -93,7 +94,8 @@ class LearningMemoryManager @Inject constructor(
         correctionPolicyEngine = CorrectionPolicyEngine(),
         difficultyEngine = DifficultyEngine(),
         learningGoalGenerator = LearningGoalGenerator(),
-        progressCalculationEngine = ProgressCalculationEngine()
+        progressCalculationEngine = ProgressCalculationEngine(),
+        tutorDecisionEngine = TutorDecisionEngine(CorrectionPolicyEngine(), DifficultyEngine())
     ) {
         this.ioDispatcher = ioDispatcher
     }
@@ -123,6 +125,8 @@ class LearningMemoryManager @Inject constructor(
 
     private val sessionLearningEvents = CopyOnWriteArrayList<LearningEvent>()
     private val sessionSpeechEvidences = CopyOnWriteArrayList<PronunciationEvidence>()
+    private var latestQualityState: SpeechQualityResult? = null
+    private var latestFluencyState: FluencyAnalysisResult? = null
 
     private val initJob by lazy {
         scope.launch {
@@ -175,6 +179,8 @@ class LearningMemoryManager @Inject constructor(
     fun startSession(scenario: Scenario, sessionId: String) {
         sessionLearningEvents.clear()
         sessionSpeechEvidences.clear()
+        latestQualityState = null
+        latestFluencyState = null
         policyState.consecutiveErrorsCount = 0
         policyState.consecutiveSuccessfulTurns = 0
         policyState.isStruggleBackoffActive = false
@@ -216,6 +222,8 @@ class LearningMemoryManager @Inject constructor(
         sessionId: String,
         turnId: String
     ) {
+        latestQualityState = quality
+        latestFluencyState = fluency
         sessionSpeechEvidences.add(pronunciation)
 
         // 1. Log Speech / Fluency Learning Event if valid audio signal exists
@@ -512,15 +520,16 @@ class LearningMemoryManager @Inject constructor(
         )
     }
 
-    val tutorDecisionEngine: TutorDecisionEngine = TutorDecisionEngine(correctionPolicyEngine, difficultyEngine)
-
     fun buildLearnerState(
         isRetryActive: Boolean = false,
         retryAttemptsCount: Int = 0,
         activeRetryError: EnglishError? = null,
         sessionDurationMs: Long = 0L,
         sessionTurnCount: Int = 0,
-        isFairUseExceeded: Boolean = false
+        isFairUseExceeded: Boolean = false,
+        latestQuality: SpeechQualityResult? = null,
+        latestFluency: FluencyAnalysisResult? = null,
+        latestPronunciation: PronunciationEvidence? = null
     ): com.vaniflow.app.engine.learning.tutor.model.TutorLearnerState {
         val masteryScores = masteryMap.mapValues { it.value.masteryScore }
         return com.vaniflow.app.engine.learning.tutor.model.TutorLearnerState(
@@ -536,9 +545,9 @@ class LearningMemoryManager @Inject constructor(
             isStruggleBackoffActive = policyState.isStruggleBackoffActive,
             activeGoals = activeGoals.toList(),
             vocabularyNeedingPractice = activeVocabularyExpressions.toList(),
-            latestQuality = null,
-            latestFluency = null,
-            latestPronunciation = sessionSpeechEvidences.lastOrNull(),
+            latestQuality = latestQuality ?: latestQualityState,
+            latestFluency = latestFluency ?: latestFluencyState,
+            latestPronunciation = latestPronunciation ?: sessionSpeechEvidences.lastOrNull(),
             sessionTurnCount = sessionTurnCount,
             sessionDurationMs = sessionDurationMs,
             currentDifficulty = currentDifficulty,
