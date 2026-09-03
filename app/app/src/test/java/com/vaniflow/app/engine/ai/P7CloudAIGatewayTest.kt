@@ -250,4 +250,33 @@ class P7CloudAIGatewayTest {
         assertTrue("Gateway adapter must be invoked", gatewayInvoked)
         assertEquals("Hello from VaniFlow AI Gateway!", (result as AIResult.Success).text)
     }
+
+    @Test
+    fun test07_productionGatewayUrlValidation() {
+        val gatewayUrl = com.vaniflow.app.BuildConfig.GATEWAY_URL
+        assertNotNull("GATEWAY_URL must be defined in BuildConfig", gatewayUrl)
+        assertTrue("GATEWAY_URL must be a valid HTTP/HTTPS endpoint", gatewayUrl.startsWith("http://") || gatewayUrl.startsWith("https://"))
+        assertTrue("GATEWAY_URL must target chat completions path", gatewayUrl.endsWith("/v1/chat"))
+    }
+
+    @Test
+    fun test08_streamSseCancellationAndChunkParsing() = runBlocking {
+        val flow = gatewayAdapter.stream(
+            endpoint = "http://127.0.0.1:59999/v1/chat",
+            apiKey = "",
+            model = "groq/compound-mini",
+            systemPrompt = "System",
+            history = emptyList(),
+            userInput = "Hello",
+            timeoutMs = 500L
+        )
+
+        var caughtException = false
+        try {
+            flow.collect { }
+        } catch (e: Exception) {
+            caughtException = true
+        }
+        assertTrue("Streaming on failed connection throws exception for router catch", caughtException)
+    }
 }

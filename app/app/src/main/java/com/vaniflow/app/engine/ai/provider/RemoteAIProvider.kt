@@ -62,8 +62,8 @@ class RemoteAIProvider @Inject constructor(
     override var config: ProviderConfig = ProviderConfig(
         providerId = providerId,
         providerName = providerName,
-        endpoint = "http://10.0.2.2:8080/v1/chat",
-        model = "llama-3.1-8b-instant",
+        endpoint = com.vaniflow.app.BuildConfig.GATEWAY_URL,
+        model = "groq/compound-mini",
         rpm = 60,
         rpd = 1000,
         tpm = 40_000,

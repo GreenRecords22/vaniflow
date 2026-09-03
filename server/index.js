@@ -5,6 +5,19 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 8080;
 const EXPECTED_APP_ID = process.env.VANIFLOW_APP_ID || 'com.vaniflow.app';
+const PROVIDER_TIMEOUT_MS = parseInt(process.env.PROVIDER_TIMEOUT_MS || '10000', 10);
+
+app.set('trust proxy', 1);
+
+// Production HTTPS enforcement
+if (process.env.NODE_ENV === 'production') {
+    app.use((req, res, next) => {
+        if (req.headers['x-forwarded-proto'] && req.headers['x-forwarded-proto'] !== 'https' && !req.secure) {
+            return res.redirect(301, `https://${req.headers.host}${req.url}`);
+        }
+        next();
+    });
+}
 
 function cleanKey(val) {
     if (!val) return '';
@@ -25,10 +38,15 @@ if (DEFAULT_MODEL === 'llama-3.1-8b-instant') {
     DEFAULT_MODEL = 'groq/compound-mini';
 }
 
-app.use(cors());
-app.use(express.json({ limit: '256kb' }));
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-VaniFlow-App-Id']
+}));
 
-// 1. In-memory rate limiting (60 requests/minute per client IP)
+app.use(express.json({ limit: '128kb' }));
+
+// 1. In-memory sliding-window rate limiting (60 requests/minute per client IP)
 const rateLimitMap = new Map();
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const MAX_REQUESTS_PER_WINDOW = 60;
@@ -47,7 +65,7 @@ function checkRateLimit(ip) {
     return true;
 }
 
-// Periodic cleanup of rateLimitMap
+// Periodic cleanup of expired rate limit entries
 setInterval(() => {
     const now = Date.now();
     for (const [ip, entry] of rateLimitMap.entries()) {
@@ -67,8 +85,10 @@ app.get('/health', (req, res) => {
     res.json({
         status: 'ok',
         service: 'vaniflow-ai-gateway',
-        version: '1.0.0',
+        version: '1.1.0',
+        environment: process.env.NODE_ENV || 'development',
         primaryProvider: activeProvider,
+        activeModel: DEFAULT_MODEL,
         timestamp: new Date().toISOString()
     });
 });
@@ -79,10 +99,11 @@ app.post('/v1/chat', async (req, res) => {
     
     // Security 1: Rate Limiting
     if (!checkRateLimit(clientIp)) {
+        res.setHeader('Retry-After', '60');
         return res.status(429).json({
             error: {
                 code: 'rate_limit_exceeded',
-                message: 'Too many requests. Please slow down.'
+                message: 'Rate limit exceeded. Maximum 60 requests per minute.'
             }
         });
     }
@@ -98,7 +119,7 @@ app.post('/v1/chat', async (req, res) => {
         });
     }
 
-    // Request Validation
+    // Security 3: Request Validation & Size Limits
     const { systemPrompt, history = [], userInput, characterId = 'raya', scenarioId = 'general', stream = false } = req.body;
 
     if (!userInput || typeof userInput !== 'string' || !userInput.trim()) {
@@ -110,7 +131,36 @@ app.post('/v1/chat', async (req, res) => {
         });
     }
 
+    if (userInput.length > 2000) {
+        return res.status(400).json({
+            error: {
+                code: 'input_too_large',
+                message: 'Field userInput exceeds maximum permitted length of 2000 characters.'
+            }
+        });
+    }
+
+    if (systemPrompt && typeof systemPrompt === 'string' && systemPrompt.length > 6000) {
+        return res.status(400).json({
+            error: {
+                code: 'system_prompt_too_large',
+                message: 'Field systemPrompt exceeds maximum permitted length of 6000 characters.'
+            }
+        });
+    }
+
     const startTime = Date.now();
+
+    // Helper for timeout-bounded fetch
+    async function fetchWithTimeout(url, options, timeoutMs = PROVIDER_TIMEOUT_MS) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+            return await fetch(url, { ...options, signal: controller.signal });
+        } finally {
+            clearTimeout(timer);
+        }
+    }
 
     // 1. Groq Provider
     if (GROQ_API_KEY) {
@@ -121,10 +171,10 @@ app.post('/v1/chat', async (req, res) => {
             }
             if (Array.isArray(history)) {
                 for (const turn of history.slice(-6)) {
-                    if (turn.content) {
+                    if (turn.content && typeof turn.content === 'string') {
                         groqMessages.push({
                             role: turn.role === 'user' ? 'user' : 'assistant',
-                            content: turn.content
+                            content: turn.content.substring(0, 2000)
                         });
                     }
                 }
@@ -132,7 +182,7 @@ app.post('/v1/chat', async (req, res) => {
             groqMessages.push({ role: 'user', content: userInput.trim() });
 
             if (stream) {
-                const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                const response = await fetchWithTimeout('https://api.groq.com/openai/v1/chat/completions', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -167,7 +217,7 @@ app.post('/v1/chat', async (req, res) => {
                 }
                 return res.end();
             } else {
-                const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                const response = await fetchWithTimeout('https://api.groq.com/openai/v1/chat/completions', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -205,8 +255,12 @@ app.post('/v1/chat', async (req, res) => {
                 });
             }
         } catch (err) {
-            return res.status(502).json({
-                error: { code: 'gateway_error', message: `Failed to communicate with Groq: ${err.message}` }
+            const isTimeout = err.name === 'AbortError';
+            return res.status(isTimeout ? 504 : 502).json({
+                error: {
+                    code: isTimeout ? 'gateway_timeout' : 'gateway_error',
+                    message: isTimeout ? 'Upstream AI provider timed out.' : 'Failed to communicate with provider.'
+                }
             });
         }
     }
@@ -219,7 +273,7 @@ app.post('/v1/chat', async (req, res) => {
                 for (const turn of history.slice(-6)) {
                     contents.push({
                         role: turn.role === 'user' ? 'user' : 'model',
-                        parts: [{ text: turn.content }]
+                        parts: [{ text: (turn.content || '').substring(0, 2000) }]
                     });
                 }
             }
@@ -241,7 +295,7 @@ app.post('/v1/chat', async (req, res) => {
                 };
             }
 
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+            const response = await fetchWithTimeout(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body)
@@ -268,8 +322,12 @@ app.post('/v1/chat', async (req, res) => {
                 scenarioId
             });
         } catch (err) {
-            return res.status(502).json({
-                error: { code: 'gateway_error', message: `Failed to communicate with Gemini: ${err.message}` }
+            const isTimeout = err.name === 'AbortError';
+            return res.status(isTimeout ? 504 : 502).json({
+                error: {
+                    code: isTimeout ? 'gateway_timeout' : 'gateway_error',
+                    message: isTimeout ? 'Upstream Gemini provider timed out.' : 'Failed to communicate with Gemini.'
+                }
             });
         }
     }
@@ -286,14 +344,14 @@ app.post('/v1/chat', async (req, res) => {
                     if (turn.content) {
                         openAiMessages.push({
                             role: turn.role === 'user' ? 'user' : 'assistant',
-                            content: turn.content
+                            content: (turn.content || '').substring(0, 2000)
                         });
                     }
                 }
             }
             openAiMessages.push({ role: 'user', content: userInput.trim() });
 
-            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            const response = await fetchWithTimeout('https://api.openai.com/v1/chat/completions', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -328,8 +386,12 @@ app.post('/v1/chat', async (req, res) => {
                 scenarioId
             });
         } catch (err) {
-            return res.status(502).json({
-                error: { code: 'gateway_error', message: `Failed to communicate with OpenAI: ${err.message}` }
+            const isTimeout = err.name === 'AbortError';
+            return res.status(isTimeout ? 504 : 502).json({
+                error: {
+                    code: isTimeout ? 'gateway_timeout' : 'gateway_error',
+                    message: isTimeout ? 'Upstream OpenAI provider timed out.' : 'Failed to communicate with OpenAI.'
+                }
             });
         }
     }
@@ -344,10 +406,11 @@ app.post('/v1/chat', async (req, res) => {
 
 app.listen(PORT, () => {
     let provider = 'None';
-    if (GROQ_API_KEY) provider = 'Groq (llama-3.1-8b-instant)';
+    if (GROQ_API_KEY) provider = `Groq (${DEFAULT_MODEL})`;
     else if (GEMINI_API_KEY) provider = 'Google Gemini (gemini-1.5-flash)';
     else if (OPENAI_API_KEY) provider = 'OpenAI (gpt-4o-mini)';
 
     console.log(`[VaniFlow AI Gateway] Running on port ${PORT}`);
+    console.log(`[VaniFlow AI Gateway] Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`[VaniFlow AI Gateway] Active Provider: ${provider}`);
 });

@@ -19,6 +19,7 @@ android {
         versionName = "0.1.0-alpha"
 
         testInstrumentationRunner = "com.vaniflow.app.HiltTestRunner"
+        buildConfigField("String", "GATEWAY_URL", "\"https://gateway.vaniflow.com/v1/chat\"")
     }
 
     signingConfigs {
@@ -44,12 +45,12 @@ android {
     buildTypes {
         debug {
             isMinifyEnabled = false
-            // Cloud API keys for development only - loaded from local.properties
-            // NEVER ship real keys in release builds
+            buildConfigField("String", "GATEWAY_URL", "\"http://10.0.2.2:8080/v1/chat\"")
         }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            buildConfigField("String", "GATEWAY_URL", "\"https://gateway.vaniflow.com/v1/chat\"")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

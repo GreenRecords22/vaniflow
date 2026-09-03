@@ -11,8 +11,8 @@ import javax.inject.Singleton
 class ApiConfigStore @Inject constructor() {
 
     private var primaryApiKey: String = ""
-    private var primaryEndpoint: String = "http://10.0.2.2:8080/v1/chat"
-    private var primaryModel: String = "llama-3.1-8b-instant"
+    private var primaryEndpoint: String = com.vaniflow.app.BuildConfig.GATEWAY_URL
+    private var primaryModel: String = "groq/compound-mini"
     private var primaryAdapterType: String = "vaniflow_gateway"
 
     private var secondaryApiKey: String = ""
