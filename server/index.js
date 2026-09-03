@@ -20,7 +20,10 @@ const GROQ_API_KEY = RAW_GROQ.startsWith('gsk_') ? RAW_GROQ : (RAW_GROQ && !RAW_
 const GEMINI_API_KEY = RAW_GEMINI || (RAW_GROQ.startsWith('AIza') ? RAW_GROQ : '');
 const OPENAI_API_KEY = RAW_OPENAI || (RAW_GROQ.startsWith('sk-') ? RAW_GROQ : '');
 
-const DEFAULT_MODEL = process.env.DEFAULT_MODEL || 'llama-3.1-8b-instant';
+let DEFAULT_MODEL = process.env.DEFAULT_MODEL || 'groq/compound-mini';
+if (DEFAULT_MODEL === 'llama-3.1-8b-instant') {
+    DEFAULT_MODEL = 'groq/compound-mini';
+}
 
 app.use(cors());
 app.use(express.json({ limit: '256kb' }));
@@ -187,11 +190,12 @@ app.post('/v1/chat', async (req, res) => {
                 }
 
                 const data = await response.json();
-                const content = data.choices?.[0]?.message?.content || '';
+                let rawContent = data.choices?.[0]?.message?.content || '';
+                const content = rawContent.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
                 const latencyMs = Date.now() - startTime;
 
                 return res.json({
-                    text: content.trim(),
+                    text: content,
                     model: DEFAULT_MODEL,
                     provider: 'groq',
                     latencyMs,
