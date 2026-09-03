@@ -35,7 +35,7 @@ class LlamaCppRuntime @Inject constructor(
         }
 
         private const val DEFAULT_LLM_ID = "llm_qwen25_05b_instruct"
-        private const val MAX_TOKENS = 160
+        private const val MAX_TOKENS = 80
         private const val TEMPERATURE = 0.8f
     }
 
@@ -90,7 +90,8 @@ class LlamaCppRuntime @Inject constructor(
         val contents = ArrayList<String>()
         roles.add("system")
         contents.add(request.systemPrompt)
-        for (turn in request.history) {
+        val boundedHistory = request.history.takeLast(6)
+        for (turn in boundedHistory) {
             roles.add(if (turn.role == AITurn.Role.USER) "user" else "assistant")
             contents.add(turn.content)
         }

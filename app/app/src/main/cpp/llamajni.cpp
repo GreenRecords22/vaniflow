@@ -127,9 +127,9 @@ Java_com_vaniflow_app_engine_ai_llm_LlamaCppRuntime_nativeLoad(JNIEnv *env, jobj
     llama_log_set(llama_log_bridge, nullptr);
 
     struct llama_context_params cparams = llama_context_default_params();
-    cparams.n_ctx = 2048;
-    cparams.n_batch = 512;
-    cparams.n_ubatch = 512;
+    cparams.n_ctx = 1024;
+    cparams.n_batch = 256;
+    cparams.n_ubatch = 256;
     cparams.n_threads = 4;
     cparams.n_threads_batch = 4;
     cparams.abort_callback = g_abort_callback;
@@ -246,6 +246,10 @@ Java_com_vaniflow_app_engine_ai_llm_LlamaCppRuntime_nativeGenerate(
             midOnError = env->GetMethodID(cbClass, "onError", "(Ljava/lang/String;)V");
             env->DeleteLocalRef(cbClass);
         }
+    // Clear previous KV cache so decoding starts clean from position 0.
+    llama_memory_t mem = llama_get_memory(g_ctx);
+    if (mem) {
+        llama_memory_clear(mem, true);
     }
 
     // Feed the prompt through the model in batches.
