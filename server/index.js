@@ -5,8 +5,21 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 8080;
 const EXPECTED_APP_ID = process.env.VANIFLOW_APP_ID || 'com.vaniflow.app';
-const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+
+function cleanKey(val) {
+    if (!val) return '';
+    return val.trim().replace(/^["']|["']$/g, '');
+}
+
+const RAW_GROQ = cleanKey(process.env.GROQ_API_KEY);
+const RAW_GEMINI = cleanKey(process.env.GEMINI_API_KEY);
+const RAW_OPENAI = cleanKey(process.env.OPENAI_API_KEY);
+
+// Intelligent key type detection
+const GROQ_API_KEY = RAW_GROQ.startsWith('gsk_') ? RAW_GROQ : (RAW_GROQ && !RAW_GROQ.startsWith('AIza') && !RAW_GROQ.startsWith('sk-') ? RAW_GROQ : '');
+const GEMINI_API_KEY = RAW_GEMINI || (RAW_GROQ.startsWith('AIza') ? RAW_GROQ : '');
+const OPENAI_API_KEY = RAW_OPENAI || (RAW_GROQ.startsWith('sk-') ? RAW_GROQ : '');
+
 const DEFAULT_MODEL = process.env.DEFAULT_MODEL || 'llama-3.1-8b-instant';
 
 app.use(cors());
@@ -43,11 +56,16 @@ setInterval(() => {
 
 // 2. Health & Status Check
 app.get('/health', (req, res) => {
+    let activeProvider = 'none_configured';
+    if (GROQ_API_KEY) activeProvider = 'groq';
+    else if (GEMINI_API_KEY) activeProvider = 'gemini';
+    else if (OPENAI_API_KEY) activeProvider = 'openai';
+
     res.json({
         status: 'ok',
         service: 'vaniflow-ai-gateway',
         version: '1.0.0',
-        primaryProvider: GROQ_API_KEY ? 'groq' : (GEMINI_API_KEY ? 'gemini' : 'none_configured'),
+        primaryProvider: activeProvider,
         timestamp: new Date().toISOString()
     });
 });
@@ -66,7 +84,7 @@ app.post('/v1/chat', async (req, res) => {
         });
     }
 
-    // Security 2: Client Verification (optional in local dev, enforced in production if configured)
+    // Security 2: Client Verification
     const appId = req.headers['x-vaniflow-app-id'];
     if (process.env.NODE_ENV === 'production' && appId !== EXPECTED_APP_ID) {
         return res.status(401).json({
@@ -91,7 +109,7 @@ app.post('/v1/chat', async (req, res) => {
 
     const startTime = Date.now();
 
-    // Check if Groq provider is configured
+    // 1. Groq Provider
     if (GROQ_API_KEY) {
         try {
             const groqMessages = [];
@@ -111,7 +129,6 @@ app.post('/v1/chat', async (req, res) => {
             groqMessages.push({ role: 'user', content: userInput.trim() });
 
             if (stream) {
-                // Streaming response
                 const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                     method: 'POST',
                     headers: {
@@ -147,7 +164,6 @@ app.post('/v1/chat', async (req, res) => {
                 }
                 return res.end();
             } else {
-                // Standard non-streaming response
                 const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                     method: 'POST',
                     headers: {
@@ -186,15 +202,12 @@ app.post('/v1/chat', async (req, res) => {
             }
         } catch (err) {
             return res.status(502).json({
-                error: {
-                    code: 'gateway_error',
-                    message: `Failed to communicate with provider: ${err.message}`
-                }
+                error: { code: 'gateway_error', message: `Failed to communicate with Groq: ${err.message}` }
             });
         }
     }
 
-    // Fallback: Gemini provider if configured
+    // 2. Google Gemini Provider
     if (GEMINI_API_KEY) {
         try {
             const contents = [];
@@ -252,24 +265,85 @@ app.post('/v1/chat', async (req, res) => {
             });
         } catch (err) {
             return res.status(502).json({
-                error: {
-                    code: 'gateway_error',
-                    message: `Failed to communicate with Gemini: ${err.message}`
-                }
+                error: { code: 'gateway_error', message: `Failed to communicate with Gemini: ${err.message}` }
             });
         }
     }
 
-    // If no provider credential is set on the server
+    // 3. OpenAI / OpenRouter Provider
+    if (OPENAI_API_KEY) {
+        try {
+            const openAiMessages = [];
+            if (systemPrompt && typeof systemPrompt === 'string') {
+                openAiMessages.push({ role: 'system', content: systemPrompt.trim() });
+            }
+            if (Array.isArray(history)) {
+                for (const turn of history.slice(-6)) {
+                    if (turn.content) {
+                        openAiMessages.push({
+                            role: turn.role === 'user' ? 'user' : 'assistant',
+                            content: turn.content
+                        });
+                    }
+                }
+            }
+            openAiMessages.push({ role: 'user', content: userInput.trim() });
+
+            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${OPENAI_API_KEY}`
+                },
+                body: JSON.stringify({
+                    model: 'gpt-4o-mini',
+                    messages: openAiMessages,
+                    temperature: 0.7,
+                    max_tokens: 256
+                })
+            });
+
+            if (!response.ok) {
+                const errText = await response.text();
+                return res.status(response.status).json({
+                    error: { code: `openai_${response.status}`, message: `OpenAI error: ${errText}` }
+                });
+            }
+
+            const data = await response.json();
+            const content = data.choices?.[0]?.message?.content || '';
+            const latencyMs = Date.now() - startTime;
+
+            return res.json({
+                text: content.trim(),
+                model: 'gpt-4o-mini',
+                provider: 'openai',
+                latencyMs,
+                tokens: data.usage?.completion_tokens || Math.ceil(content.length / 4),
+                characterId,
+                scenarioId
+            });
+        } catch (err) {
+            return res.status(502).json({
+                error: { code: 'gateway_error', message: `Failed to communicate with OpenAI: ${err.message}` }
+            });
+        }
+    }
+
     return res.status(503).json({
         error: {
             code: 'provider_unconfigured',
-            message: 'No cloud provider API key configured on AI Gateway. Please set GROQ_API_KEY or GEMINI_API_KEY in server environment.'
+            message: 'No valid cloud provider API key configured on AI Gateway. Set GROQ_API_KEY, GEMINI_API_KEY, or OPENAI_API_KEY in server/.env.'
         }
     });
 });
 
 app.listen(PORT, () => {
+    let provider = 'None';
+    if (GROQ_API_KEY) provider = 'Groq (llama-3.1-8b-instant)';
+    else if (GEMINI_API_KEY) provider = 'Google Gemini (gemini-1.5-flash)';
+    else if (OPENAI_API_KEY) provider = 'OpenAI (gpt-4o-mini)';
+
     console.log(`[VaniFlow AI Gateway] Running on port ${PORT}`);
-    console.log(`[VaniFlow AI Gateway] Primary Provider: ${GROQ_API_KEY ? 'Groq (llama-3.1-8b-instant)' : (GEMINI_API_KEY ? 'Gemini 1.5 Flash' : 'None (Set GROQ_API_KEY)')}`);
+    console.log(`[VaniFlow AI Gateway] Active Provider: ${provider}`);
 });

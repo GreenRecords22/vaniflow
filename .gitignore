@@ -9,6 +9,8 @@ build/
 local.properties
 .env
 *.env
+node_modules/
+server/node_modules/
 google-services.json
 service-account*.json
 *.jks
