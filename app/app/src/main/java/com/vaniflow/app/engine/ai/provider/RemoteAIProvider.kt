@@ -1,4 +1,4 @@
-﻿package com.vaniflow.app.engine.ai.provider
+package com.vaniflow.app.engine.ai.provider
 
 import com.vaniflow.app.domain.model.SkillLevel
 import com.vaniflow.app.engine.ai.AIResponseMetadata
@@ -9,6 +9,7 @@ import com.vaniflow.app.engine.ai.ContextManager
 import com.vaniflow.app.engine.ai.ConversationalDialogueEngine
 import com.vaniflow.app.engine.ai.provider.adapter.GeminiProviderAdapter
 import com.vaniflow.app.engine.ai.provider.adapter.OpenAICompatibleAdapter
+import com.vaniflow.app.engine.ai.provider.adapter.VaniFlowGatewayAdapter
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -17,7 +18,7 @@ import javax.inject.Singleton
 
 /**
  * Primary Remote Cloud AI Provider.
- * Connects to real HTTP LLM endpoints (Groq / OpenRouter / Gateway / Gemini)
+ * Connects to the secure VaniFlow AI Gateway (or direct Groq/Gemini endpoints)
  * with robust circuit-breaker and conversational fallback resilience.
  */
 @Singleton
@@ -26,7 +27,8 @@ class RemoteAIProvider @Inject constructor(
     private val dialogueEngine: ConversationalDialogueEngine,
     private val configStore: ApiConfigStore,
     private val openAIAdapter: OpenAICompatibleAdapter,
-    private val geminiAdapter: GeminiProviderAdapter
+    private val geminiAdapter: GeminiProviderAdapter,
+    private val gatewayAdapter: VaniFlowGatewayAdapter
 ) : AIProvider {
 
     constructor(healthManager: ProviderHealthManager) : this(
@@ -34,7 +36,23 @@ class RemoteAIProvider @Inject constructor(
         ConversationalDialogueEngine(),
         ApiConfigStore(),
         OpenAICompatibleAdapter(),
-        GeminiProviderAdapter()
+        GeminiProviderAdapter(),
+        VaniFlowGatewayAdapter()
+    )
+
+    constructor(
+        healthManager: ProviderHealthManager,
+        dialogueEngine: ConversationalDialogueEngine,
+        configStore: ApiConfigStore,
+        openAIAdapter: OpenAICompatibleAdapter,
+        geminiAdapter: GeminiProviderAdapter
+    ) : this(
+        healthManager,
+        dialogueEngine,
+        configStore,
+        openAIAdapter,
+        geminiAdapter,
+        VaniFlowGatewayAdapter()
     )
 
     override val providerId: String = "remote_primary"
@@ -44,7 +62,7 @@ class RemoteAIProvider @Inject constructor(
     override var config: ProviderConfig = ProviderConfig(
         providerId = providerId,
         providerName = providerName,
-        endpoint = "https://api.groq.com/openai/v1/chat/completions",
+        endpoint = "http://10.0.2.2:8080/v1/chat",
         model = "llama-3.1-8b-instant",
         rpm = 60,
         rpd = 1000,
@@ -71,17 +89,17 @@ class RemoteAIProvider @Inject constructor(
 
         val startTime = System.currentTimeMillis()
 
-        // 1. Real HTTP API request if credentials are configured
-        if (configStore.hasPrimaryCredentials()) {
+        // 1. Real HTTP API request if gateway or credentials are configured
+        if (configStore.hasPrimaryCredentials() || configStore.isGatewayConfigured()) {
             val endpoint = configStore.getPrimaryEndpoint().ifBlank { config.endpoint }
             val apiKey = configStore.getPrimaryApiKey()
             val model = configStore.getPrimaryModel().ifBlank { config.model }
             val adapterType = configStore.getPrimaryAdapterType()
 
-            val result = if (adapterType == "gemini") {
-                geminiAdapter.generate(endpoint, apiKey, model, systemPrompt, conversationHistory, userInput, config.timeoutMs)
-            } else {
-                openAIAdapter.generate(endpoint, apiKey, model, systemPrompt, conversationHistory, userInput, config.timeoutMs)
+            val result = when (adapterType) {
+                "vaniflow_gateway" -> gatewayAdapter.generate(endpoint, apiKey, model, systemPrompt, conversationHistory, userInput, config.timeoutMs)
+                "gemini" -> geminiAdapter.generate(endpoint, apiKey, model, systemPrompt, conversationHistory, userInput, config.timeoutMs)
+                else -> openAIAdapter.generate(endpoint, apiKey, model, systemPrompt, conversationHistory, userInput, config.timeoutMs)
             }
 
             if (result is AIResult.Success) {
@@ -135,17 +153,17 @@ class RemoteAIProvider @Inject constructor(
             return@flow
         }
 
-        if (configStore.hasPrimaryCredentials()) {
+        if (configStore.hasPrimaryCredentials() || configStore.isGatewayConfigured()) {
             val endpoint = configStore.getPrimaryEndpoint().ifBlank { config.endpoint }
             val apiKey = configStore.getPrimaryApiKey()
             val model = configStore.getPrimaryModel().ifBlank { config.model }
             val adapterType = configStore.getPrimaryAdapterType()
 
             try {
-                val flow = if (adapterType == "gemini") {
-                    geminiAdapter.stream(endpoint, apiKey, model, systemPrompt, conversationHistory, userInput, config.timeoutMs)
-                } else {
-                    openAIAdapter.stream(endpoint, apiKey, model, systemPrompt, conversationHistory, userInput, config.timeoutMs)
+                val flow = when (adapterType) {
+                    "vaniflow_gateway" -> gatewayAdapter.stream(endpoint, apiKey, model, systemPrompt, conversationHistory, userInput, config.timeoutMs)
+                    "gemini" -> geminiAdapter.stream(endpoint, apiKey, model, systemPrompt, conversationHistory, userInput, config.timeoutMs)
+                    else -> openAIAdapter.stream(endpoint, apiKey, model, systemPrompt, conversationHistory, userInput, config.timeoutMs)
                 }
                 var anyToken = false
                 flow.collect { token ->
@@ -183,21 +201,22 @@ class RemoteAIProvider @Inject constructor(
         }
     }
 
-    private fun detectCharacter(systemPrompt: String): String {
-        val lower = systemPrompt.lowercase()
+    override fun recordSuccess(latencyMs: Long, tokens: Int) {
+        healthManager.recordSuccess(providerId, latencyMs, tokens)
+    }
+
+    override fun recordFailure(isRateLimit: Boolean) {
+        healthManager.recordFailure(this, isRateLimit)
+    }
+
+    private fun detectCharacter(prompt: String): String {
+        val lower = prompt.lowercase()
         return when {
+            lower.contains("raya") -> "raya"
             lower.contains("rudra") -> "rudra"
             lower.contains("adwaita") -> "adwaita"
             lower.contains("shub") -> "shub"
             else -> "raya"
         }
-    }
-
-    override fun recordSuccess(latencyMs: Long, tokensGenerated: Int) {
-        healthManager.recordSuccess(providerId, latencyMs, tokensGenerated)
-    }
-
-    override fun recordFailure(isRateLimit: Boolean) {
-        healthManager.recordFailure(this, isRateLimit)
     }
 }
