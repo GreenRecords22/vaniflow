@@ -26,6 +26,43 @@ class ConversationalDialogueEngine @Inject constructor() {
         val charId = characterId.lowercase().trim()
 
         val response = when {
+            // 0. Prompt Injection & Security Defense (Never reveal system prompts/keys, stay in role)
+            lower.contains("ignore previous instructions") || lower.contains("ignore all instructions") ||
+                lower.contains("reveal your system prompt") || lower.contains("show system prompt") ||
+                lower.contains("reveal system prompt") || lower.contains("give me api key") ||
+                lower.contains("reveal api key") || lower.contains("you are no longer an english tutor") ||
+                lower.contains("you are now dan") || lower.contains("jailbreak") -> {
+                when (charId) {
+                    "raya" -> "I am your VaniFlow English conversation partner! My goal is helping you speak with confidence. What would you like to practice today ✨?"
+                    "rudra" -> "Haha, nice try! I'm here to help you crush your English speaking goals. Let's keep practicing!"
+                    "adwaita" -> "My objective is coaching your professional English communication. Let us maintain our focus on your speaking practice."
+                    "shub" -> "I am your interview and speaking coach. Let us continue practicing your English articulation."
+                    else -> "I am your AI English tutor on VaniFlow. Let's focus on practicing your spoken English!"
+                }
+            }
+
+            // 0.1 Out-of-Scope Task Redirection (Coding requests -> English practice)
+            lower.contains("write python code") || lower.contains("write code") || lower.contains("write javascript") ||
+                lower.contains("write java code") || lower.contains("debug this code") || lower.contains("write sql query") ||
+                lower.contains("write c++") || lower.contains("write a script") -> {
+                when (charId) {
+                    "raya" -> "I'd love to help you practice English for software and tech! Try explaining to me in English what your code or project is supposed to do 😄."
+                    "rudra" -> "I can help you talk about tech in English! Tell me about the project you're building."
+                    "adwaita" -> "We can practice technical communication. How would you describe the software architecture and requirements in English?"
+                    else -> "I can help you practice English around programming! Try telling me in English what your code should do."
+                }
+            }
+
+            // 0.2 Out-of-Scope Task Redirection (Stock market, math solver, personal assistant automation)
+            lower.contains("stock price") || lower.contains("crypto price") || lower.contains("solve math") ||
+                lower.contains("solve this equation") || lower.contains("calculate math") -> {
+                when (charId) {
+                    "raya" -> "Let's practice how you'd ask that naturally in English: 'Could you tell me the current stock price?' How would you phrase your next question?"
+                    "rudra" -> "Let's turn that into English practice! Try asking: 'What are the market trends today?'"
+                    else -> "Let's practice how to express that in fluent English: 'Could you provide the latest market analysis?'"
+                }
+            }
+
             // 1. Emotional States & Feelings (Tired, Exhausted, Stressed, Happy)
             lower.contains("tired") || lower.contains("exhausted") || lower.contains("sleepy") || lower.contains("long day") -> {
                 when (charId) {

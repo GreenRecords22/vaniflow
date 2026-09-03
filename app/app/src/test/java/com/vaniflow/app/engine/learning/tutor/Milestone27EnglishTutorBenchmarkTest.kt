@@ -14,8 +14,11 @@ class Milestone27EnglishTutorBenchmarkTest {
 
     @Before
     fun setup() {
-        tutorEngine = EnglishCorrectionEngine()
-        learningMemory = LearningMemoryManager()
+        kotlinx.coroutines.runBlocking {
+            tutorEngine = EnglishCorrectionEngine()
+            learningMemory = LearningMemoryManager()
+            learningMemory.ensureLoaded()
+        }
     }
 
     @Test

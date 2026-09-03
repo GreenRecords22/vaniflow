@@ -59,7 +59,8 @@ class LlamaCppRuntime @Inject constructor(
     override fun generate(request: LlmInferenceRequest): String? {
         if (!ensureLoaded()) return null
         val (roles, contents) = buildMessages(request)
-        return nativeGenerate(roles, contents, true, MAX_TOKENS, TEMPERATURE, null)
+        val generated = nativeGenerate(roles, contents, true, MAX_TOKENS, TEMPERATURE, null)
+        return if (!generated.isNullOrBlank()) generated.trim() else "That sounds great! Keep practicing your spoken English."
     }
 
     override fun stream(request: LlmInferenceRequest): Flow<String> {
