@@ -37,7 +37,16 @@ data class ProfileUiState(
     val isPrivacyDialogOpen: Boolean = false,
     val isAboutDialogOpen: Boolean = false,
     val models: List<ModelUiItem> = emptyList(),
-    val modelError: String? = null
+    val modelError: String? = null,
+    val isApiSettingsOpen: Boolean = false,
+    val groqApiKey: String = "",
+    val geminiApiKey: String = "",
+    val groqModel: String = "llama-3.3-70b-versatile",
+    val geminiModel: String = "gemini-1.5-flash",
+    val isGroqConfigured: Boolean = false,
+    val isGeminiConfigured: Boolean = false,
+    val apiTestStatus: String? = null,
+    val isTestingApi: Boolean = false
 )
 
 @HiltViewModel
@@ -46,8 +55,28 @@ class ProfileViewModel @Inject constructor(
     private val progressRepository: ProgressRepository,
     private val vocabularyRepository: VocabularyRepository,
     private val aiResponseCache: AIResponseCache,
-    private val modelManager: ModelManager
+    private val modelManager: ModelManager,
+    private val apiConfigStore: com.vaniflow.app.engine.ai.provider.ApiConfigStore,
+    private val openAIAdapter: com.vaniflow.app.engine.ai.provider.adapter.OpenAICompatibleAdapter,
+    private val geminiAdapter: com.vaniflow.app.engine.ai.provider.adapter.GeminiProviderAdapter
 ) : ViewModel() {
+
+    constructor(
+        sessionRepository: SessionRepository,
+        progressRepository: ProgressRepository,
+        vocabularyRepository: VocabularyRepository,
+        aiResponseCache: AIResponseCache,
+        modelManager: ModelManager
+    ) : this(
+        sessionRepository,
+        progressRepository,
+        vocabularyRepository,
+        aiResponseCache,
+        modelManager,
+        com.vaniflow.app.engine.ai.provider.ApiConfigStore(),
+        com.vaniflow.app.engine.ai.provider.adapter.OpenAICompatibleAdapter(),
+        com.vaniflow.app.engine.ai.provider.adapter.GeminiProviderAdapter()
+    )
 
     private val _uiState = MutableStateFlow(ProfileUiState())
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
@@ -56,6 +85,20 @@ class ProfileViewModel @Inject constructor(
         observeProfileStats()
         loadModelStates()
         observeDownloads()
+        loadApiConfig()
+    }
+
+    private fun loadApiConfig() {
+        _uiState.update {
+            it.copy(
+                groqApiKey = apiConfigStore.getPrimaryApiKey(),
+                geminiApiKey = apiConfigStore.getSecondaryApiKey(),
+                groqModel = apiConfigStore.getPrimaryModel().ifBlank { "llama-3.3-70b-versatile" },
+                geminiModel = apiConfigStore.getSecondaryModel().ifBlank { "gemini-1.5-flash" },
+                isGroqConfigured = apiConfigStore.hasPrimaryCredentials(),
+                isGeminiConfigured = apiConfigStore.hasSecondaryCredentials()
+            )
+        }
     }
 
     private fun observeProfileStats() {
@@ -213,6 +256,102 @@ class ProfileViewModel @Inject constructor(
                     savedWordsCount = 0
                 )
             }
+        }
+    }
+
+    fun openApiSettings() {
+        loadApiConfig()
+        _uiState.update { it.copy(isApiSettingsOpen = true, apiTestStatus = null) }
+    }
+
+    fun dismissApiSettings() {
+        _uiState.update { it.copy(isApiSettingsOpen = false, apiTestStatus = null) }
+    }
+
+    fun updateGroqApiKey(key: String) {
+        _uiState.update { it.copy(groqApiKey = key) }
+    }
+
+    fun updateGeminiApiKey(key: String) {
+        _uiState.update { it.copy(geminiApiKey = key) }
+    }
+
+    fun updateGroqModel(model: String) {
+        _uiState.update { it.copy(groqModel = model) }
+    }
+
+    fun updateGeminiModel(model: String) {
+        _uiState.update { it.copy(geminiModel = model) }
+    }
+
+    fun saveApiSettings() {
+        val state = _uiState.value
+        apiConfigStore.setPrimaryConfig(
+            apiKey = state.groqApiKey,
+            endpoint = "https://api.groq.com/openai/v1/chat/completions",
+            model = state.groqModel.ifBlank { "llama-3.3-70b-versatile" },
+            adapterType = "openai_compatible"
+        )
+        apiConfigStore.setSecondaryConfig(
+            apiKey = state.geminiApiKey,
+            endpoint = "https://generativelanguage.googleapis.com/v1beta/models/${state.geminiModel.ifBlank { "gemini-1.5-flash" }}:generateContent",
+            model = state.geminiModel.ifBlank { "gemini-1.5-flash" },
+            adapterType = "gemini"
+        )
+        loadApiConfig()
+        _uiState.update { it.copy(isApiSettingsOpen = false, apiTestStatus = null) }
+    }
+
+    fun testGroqConnection() {
+        val key = _uiState.value.groqApiKey.trim()
+        val model = _uiState.value.groqModel.trim().ifBlank { "llama-3.3-70b-versatile" }
+        if (key.isBlank()) {
+            _uiState.update { it.copy(apiTestStatus = "Please enter a Groq API key (starts with gsk_...)") }
+            return
+        }
+        _uiState.update { it.copy(isTestingApi = true, apiTestStatus = "Testing Groq ($model)...") }
+        viewModelScope.launch {
+            val result = openAIAdapter.generate(
+                endpoint = "https://api.groq.com/openai/v1/chat/completions",
+                apiKey = key,
+                model = model,
+                systemPrompt = "You are a test assistant.",
+                history = emptyList(),
+                userInput = "Say hello in 3 words.",
+                timeoutMs = 6000L
+            )
+            val status = when (result) {
+                is com.vaniflow.app.engine.ai.AIResult.Success -> "Groq Connected successfully! (${result.metadata.latencyMs}ms): \"${result.text.take(40)}\""
+                is com.vaniflow.app.engine.ai.AIResult.Error -> "Groq Connection Failed: ${result.message}"
+            }
+            _uiState.update { it.copy(isTestingApi = false, apiTestStatus = status) }
+        }
+    }
+
+    fun testGeminiConnection() {
+        val key = _uiState.value.geminiApiKey.trim()
+        val model = _uiState.value.geminiModel.trim().ifBlank { "gemini-1.5-flash" }
+        if (key.isBlank()) {
+            _uiState.update { it.copy(apiTestStatus = "Please enter a Gemini API key (starts with AIzaSy...)") }
+            return
+        }
+        _uiState.update { it.copy(isTestingApi = true, apiTestStatus = "Testing Gemini ($model)...") }
+        viewModelScope.launch {
+            val endpoint = "https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent"
+            val result = geminiAdapter.generate(
+                endpoint = endpoint,
+                apiKey = key,
+                model = model,
+                systemPrompt = "You are a test assistant.",
+                history = emptyList(),
+                userInput = "Say hello in 3 words.",
+                timeoutMs = 6000L
+            )
+            val status = when (result) {
+                is com.vaniflow.app.engine.ai.AIResult.Success -> "Gemini Connected successfully! (${result.metadata.latencyMs}ms): \"${result.text.take(40)}\""
+                is com.vaniflow.app.engine.ai.AIResult.Error -> "Gemini Connection Failed: ${result.message}"
+            }
+            _uiState.update { it.copy(isTestingApi = false, apiTestStatus = status) }
         }
     }
 }

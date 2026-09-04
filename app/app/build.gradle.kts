@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -20,6 +22,24 @@ android {
 
         testInstrumentationRunner = "com.vaniflow.app.HiltTestRunner"
         buildConfigField("String", "GATEWAY_URL", "\"https://gateway.vaniflow.com/v1/chat\"")
+
+        val localProps = Properties()
+        val localPropsFile = rootProject.file("local.properties")
+        if (localPropsFile.exists()) {
+            localPropsFile.inputStream().use { localProps.load(it) }
+        }
+        val groqKey = (localProps.getProperty("GROQ_API_KEY")
+            ?: (project.findProperty("GROQ_API_KEY") as? String)
+            ?: System.getenv("GROQ_API_KEY")
+            ?: "").replace("\"", "\\\"")
+
+        val geminiKey = (localProps.getProperty("GEMINI_API_KEY")
+            ?: (project.findProperty("GEMINI_API_KEY") as? String)
+            ?: System.getenv("GEMINI_API_KEY")
+            ?: "").replace("\"", "\\\"")
+
+        buildConfigField("String", "GROQ_API_KEY", "\"$groqKey\"")
+        buildConfigField("String", "GEMINI_API_KEY", "\"$geminiKey\"")
     }
 
     signingConfigs {
@@ -34,7 +54,7 @@ android {
                         props[trimmed.substring(0, eq).trim()] = trimmed.substring(eq + 1).trim()
                     }
                 }
-                storeFile = file(props["STORE_FILE"])
+                storeFile = props["STORE_FILE"]?.let { file(it) }
                 storePassword = props["STORE_PASSWORD"]
                 keyAlias = props["KEY_ALIAS"]
                 keyPassword = props["KEY_PASSWORD"]

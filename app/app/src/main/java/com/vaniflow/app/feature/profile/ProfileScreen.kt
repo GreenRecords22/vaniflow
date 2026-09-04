@@ -59,6 +59,12 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vaniflow.app.domain.model.ModelState
 
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Key
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+
 private data class SettingItemModel(
     val title: String,
     val subtitle: String? = null,
@@ -72,6 +78,170 @@ fun ProfileScreen(
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // AI Cloud & Tutor Engine Settings Dialog
+    if (uiState.isApiSettingsOpen) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissApiSettings() },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Key,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "AI Cloud & Tutor Engine",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            text = {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    item {
+                        Text(
+                            text = "Connect Groq (LLaMA 3.3 70B) and Google Gemini for real-time, highly intelligent English tutoring, natural answers, and live grammar corrections.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    item {
+                        Text(
+                            text = "Primary Provider: Groq (Ultra-Fast 70B)",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        OutlinedTextField(
+                            value = uiState.groqApiKey,
+                            onValueChange = { viewModel.updateGroqApiKey(it) },
+                            label = { Text("Groq API Key (gsk_...)") },
+                            placeholder = { Text("Paste your Groq API key") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                            )
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Model: ${uiState.groqModel}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            OutlinedButton(
+                                onClick = { viewModel.testGroqConnection() },
+                                enabled = !uiState.isTestingApi && uiState.groqApiKey.isNotBlank(),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                            ) {
+                                Text("Test Groq", style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                    }
+
+                    item {
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                        Text(
+                            text = "Secondary Provider: Google Gemini (Failover Backup)",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        OutlinedTextField(
+                            value = uiState.geminiApiKey,
+                            onValueChange = { viewModel.updateGeminiApiKey(it) },
+                            label = { Text("Gemini API Key (AIzaSy...)") },
+                            placeholder = { Text("Paste your Gemini API key") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                            )
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Model: ${uiState.geminiModel}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            OutlinedButton(
+                                onClick = { viewModel.testGeminiConnection() },
+                                enabled = !uiState.isTestingApi && uiState.geminiApiKey.isNotBlank(),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                            ) {
+                                Text("Test Gemini", style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                    }
+
+                    if (uiState.isTestingApi) {
+                        item {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Verifying API connection...", style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    }
+
+                    uiState.apiTestStatus?.let { statusMsg ->
+                        item {
+                            Card(
+                                shape = RoundedCornerShape(8.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (statusMsg.contains("Failed", ignoreCase = true) || statusMsg.contains("Please enter", ignoreCase = true))
+                                        MaterialTheme.colorScheme.errorContainer
+                                    else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = statusMsg,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    modifier = Modifier.padding(8.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = { viewModel.saveApiSettings() }) {
+                    Text("Save & Apply")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissApiSettings() }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     // Reset Confirmation Dialog
     if (uiState.isResetDialogOpen) {
@@ -228,7 +398,14 @@ fun ProfileScreen(
         )
     }
 
+    val isCloudConfigured = uiState.isGroqConfigured || uiState.isGeminiConfigured
     val settingsItems = listOf(
+        SettingItemModel(
+            title = "AI Cloud & Tutor Engine",
+            subtitle = if (isCloudConfigured) "Configured (Groq / Gemini)" else "Connect Groq / Gemini API for Real AI",
+            icon = Icons.Default.Key,
+            onClick = { viewModel.openApiSettings() }
+        ),
         SettingItemModel(
             title = "AI Model Management",
             subtitle = "Download & manage offline voice and LLM models",
