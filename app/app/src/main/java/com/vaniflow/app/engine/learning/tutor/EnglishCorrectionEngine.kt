@@ -121,7 +121,7 @@ class EnglishCorrectionEngine @Inject constructor() {
         ),
         Rule(
             ruleId = "tense_i_go_place_yesterday",
-            regex = "\\b(i|we|they|he|she)\\s+go\\s+([a-zA-Z]+)\\s+(yesterday|last\\s+(?:night|week|month|year))\\b".toRegex(RegexOption.IGNORE_CASE),
+            regex = "\\b(i|we|they|he|she)\\s+go\\s+(?:to\\s+)?([a-zA-Z]+)\\s+(yesterday|last\\s+(?:night|week|month|year))\\b".toRegex(RegexOption.IGNORE_CASE),
             replacementTransform = { match ->
                 val place = match.groupValues[2]
                 val formattedPlace = if (place.equals("market", ignoreCase = true)) "to the market" else if (place.equals("home", ignoreCase = true) || place.equals("there", ignoreCase = true)) place else "to $place"
@@ -268,6 +268,22 @@ class EnglishCorrectionEngine @Inject constructor() {
             category = EnglishErrorCategory.PREPOSITIONS,
             severity = CorrectionSeverity.IMPORTANT
         ),
+        Rule(
+            ruleId = "prep_arrived_on",
+            regex = "\\barrived\\s+on\\s+(the\\s+)?(airport|station|hotel|office|school|college|scene|destination)\\b".toRegex(RegexOption.IGNORE_CASE),
+            replacementTransform = { match -> "arrived at ${match.groupValues[1]}${match.groupValues[2]}" },
+            explanation = "Use 'arrived at' for specific locations like an airport or station.",
+            category = EnglishErrorCategory.PREPOSITIONS,
+            severity = CorrectionSeverity.IMPORTANT
+        ),
+        Rule(
+            ruleId = "prep_at_morning",
+            regex = "\\bat\\s+morning\\b".toRegex(RegexOption.IGNORE_CASE),
+            replacementTransform = { "in the morning" },
+            explanation = "Say 'in the morning' instead of 'at morning'.",
+            category = EnglishErrorCategory.PREPOSITIONS,
+            severity = CorrectionSeverity.IMPORTANT
+        ),
 
         // 5. Articles: "a apple" -> "an apple", "an doctor" -> "a doctor"
         Rule(
@@ -399,6 +415,14 @@ class EnglishCorrectionEngine @Inject constructor() {
             replacementTransform = { match -> "graduated from ${match.groupValues[1]}" },
             explanation = "Say 'graduated from college' ('passed out' means fainted).",
             category = EnglishErrorCategory.WORD_CHOICE,
+            severity = CorrectionSeverity.STYLE
+        ),
+        Rule(
+            ruleId = "phrasing_good_name",
+            regex = "\\b(what\\s+is|what's)\\s+your\\s+good\\s+name\\b".toRegex(RegexOption.IGNORE_CASE),
+            replacementTransform = { "What is your name" },
+            explanation = "In standard English, simply ask 'What is your name?' rather than 'good name'.",
+            category = EnglishErrorCategory.NATURAL_PHRASING,
             severity = CorrectionSeverity.STYLE
         )
     )

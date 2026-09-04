@@ -92,4 +92,17 @@ object ConversationPromptBuilder {
     fun buildRegenerationPrompt(basePrompt: String): String =
         "$basePrompt\n\nIMPORTANT: Your previous answer repeated an earlier response or ignored the question. " +
             "Give a DIFFERENT, relevant answer that directly addresses the latest user message."
+
+    /** Targeted corrective prompt including specific quality failure guidance for regeneration loops. */
+    fun buildCorrectiveRegenerationPrompt(basePrompt: String, failureReason: String, correctiveGuidance: String? = null): String = buildString {
+        append(basePrompt)
+        appendLine()
+        appendLine()
+        appendLine("CRITICAL CORRECTION FOR THIS ATTEMPT:")
+        appendLine("Your previous attempt failed quality validation: $failureReason.")
+        if (!correctiveGuidance.isNullOrBlank()) {
+            appendLine("Guidance: $correctiveGuidance")
+        }
+        appendLine("Please generate a direct, natural spoken English reply strictly fixing this issue.")
+    }.trim()
 }

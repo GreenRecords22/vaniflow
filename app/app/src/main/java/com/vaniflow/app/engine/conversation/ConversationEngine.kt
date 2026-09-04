@@ -634,7 +634,12 @@ class ConversationEngine private constructor(
     private val responseQualityGuard: com.vaniflow.app.engine.ai.guard.ResponseQualityGuard = com.vaniflow.app.engine.ai.guard.ResponseQualityGuard()
 
     private fun cleanSpokenText(text: String, characterName: String): String {
-        return responseQualityGuard.cleanPrefixes(text, characterName)
+        var clean = responseQualityGuard.cleanPrefixes(text, characterName)
+        clean = clean.replace("<think>", "").replace("</think>", "")
+            .replace("<user_speech>", "").replace("</user_speech>", "")
+            .replace("[REASONING]", "").replace("[/REASONING]", "")
+            .trim()
+        return clean
     }
 
     fun endSession(): SessionScore {

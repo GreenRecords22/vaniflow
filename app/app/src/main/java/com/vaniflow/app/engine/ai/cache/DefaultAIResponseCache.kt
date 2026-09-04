@@ -135,7 +135,7 @@ class DefaultAIResponseCache @Inject constructor(
         _usageStats.value = when (routingLevel) {
             AIRoutingLevel.LOCAL_SLM -> current.copy(localRequests = current.localRequests + 1)
             AIRoutingLevel.OPTIONAL_CLOUD -> current.copy(cloudRequests = current.cloudRequests + 1)
-            AIRoutingLevel.LOCAL_FALLBACK, AIRoutingLevel.SCENARIO_MATRIX ->
+            AIRoutingLevel.LOCAL_FALLBACK, AIRoutingLevel.SCENARIO_MATRIX, AIRoutingLevel.EMERGENCY_FALLBACK ->
                 current.copy(fallbackRequests = current.fallbackRequests + 1)
             AIRoutingLevel.CONTEXT_AWARE_FALLBACK -> current
             AIRoutingLevel.DETERMINISTIC_RULE -> current

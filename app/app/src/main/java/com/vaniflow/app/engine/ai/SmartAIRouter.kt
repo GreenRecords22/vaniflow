@@ -21,6 +21,9 @@ import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
 import javax.inject.Singleton
 
+import com.vaniflow.app.engine.ai.guard.QualityCheckResult
+import com.vaniflow.app.engine.ai.guard.ResponseQualityGuard
+
 /**
  * Master Smart AI Router — API-First + Token Saver + Smart Memory Architecture:
  *
@@ -45,6 +48,7 @@ class SmartAIRouter @Inject constructor(
     private var activeScenarioId: String = "general"
     private val modelTier: String = VaniFlowModelTier.CORE.name
     private val promptVersion: String = "2.0"
+    private val responseQualityGuard: ResponseQualityGuard = ResponseQualityGuard()
 
     /** Backward-compatible constructor for testing with legacy local + cloud provider arguments. */
     constructor(
@@ -130,33 +134,56 @@ class SmartAIRouter @Inject constructor(
         } else {
             providerRegistry.allProviders.sortedBy { it.priority }
         }
+
         for (provider in providers) {
             if (provider.isAvailable()) {
-                val result = provider.generateResponse(memoryPrompt, rollingHistory, userInput)
-                if (result is AIResult.Success) {
-                    val text = result.text
-                    val finalText = if (provider !is FallbackAIProvider && RepetitionGuard.isRepetition(text, lastAssistantTurns(rollingHistory))) {
-                        val fallback = fallbackAIEngine.generateResponse(systemPrompt, rollingHistory, userInput)
-                        if (fallback is AIResult.Success && !RepetitionGuard.isRepetition(fallback.text, listOf(text))) {
-                            fallback.text
+                var attempt = 0
+                var currentPrompt = memoryPrompt
+                var candidateResult: AIResult.Success? = null
+
+                while (attempt < 3) {
+                    val result = provider.generateResponse(currentPrompt, rollingHistory, userInput)
+                    if (result is AIResult.Success) {
+                        val cleaned = responseQualityGuard.cleanPrefixes(result.text, activeCharacterId)
+                        val check = responseQualityGuard.validate(cleaned, userInput, rollingHistory, characterName = activeCharacterId)
+                        if (check is QualityCheckResult.Valid) {
+                            candidateResult = AIResult.Success(
+                                text = cleaned,
+                                latencyMs = result.metadata.latencyMs,
+                                metadata = result.metadata
+                            )
+                            break
+                        } else if (check is QualityCheckResult.Invalid && provider !is FallbackAIProvider) {
+                            attempt++
+                            currentPrompt = ConversationPromptBuilder.buildCorrectiveRegenerationPrompt(
+                                basePrompt = memoryPrompt,
+                                failureReason = check.reason,
+                                correctiveGuidance = check.correctivePrompt
+                            )
                         } else {
-                            "That's an interesting angle! Let's explore that further—what else comes to mind?"
+                            // If fallback provider, accept response without looping
+                            candidateResult = AIResult.Success(
+                                text = cleaned.ifBlank { result.text },
+                                latencyMs = result.metadata.latencyMs,
+                                metadata = result.metadata
+                            )
+                            break
                         }
                     } else {
-                        text
+                        break
                     }
+                }
+
+                if (candidateResult != null) {
+                    val finalText = candidateResult.text
                     RepetitionGuard.record(finalText)
                     cacheKnowledgeIfEligible(userInput, finalText, rollingHistory, decision.isSensitive)
                     val inTokens = ContextManager.estimateTokenCount(memoryPrompt) + ContextManager.estimateTokenCount(userInput)
                     val outTokens = ContextManager.estimateTokenCount(finalText)
-                    usageTracker.recordTurn(provider.providerId, inTokens, outTokens, result.metadata.latencyMs, isCacheHit = false)
+                    usageTracker.recordTurn(provider.providerId, inTokens, outTokens, candidateResult.metadata.latencyMs, isCacheHit = false)
                     memoryManager.addTurn("user", userInput)
                     memoryManager.addTurn("assistant", finalText)
-                    return AIResult.Success(
-                        text = finalText,
-                        latencyMs = result.metadata.latencyMs,
-                        metadata = result.metadata
-                    )
+                    return candidateResult
                 }
             }
         }
@@ -205,6 +232,7 @@ class SmartAIRouter @Inject constructor(
         } else {
             providerRegistry.allProviders.sortedBy { it.priority }
         }
+
         for (provider in streamingProviders) {
             if (provider.isAvailable()) {
                 var anyToken = false
@@ -216,12 +244,23 @@ class SmartAIRouter @Inject constructor(
                 }
                 val full = collected.toString().trim()
                 if (anyToken && full.isNotBlank()) {
-                    RepetitionGuard.record(full)
-                    cacheKnowledgeIfEligible(userInput, full, rollingHistory, decision.isSensitive)
+                    val cleaned = responseQualityGuard.cleanPrefixes(full, activeCharacterId)
+                    RepetitionGuard.record(cleaned)
+                    cacheKnowledgeIfEligible(userInput, cleaned, rollingHistory, decision.isSensitive)
                     memoryManager.addTurn("user", userInput)
-                    memoryManager.addTurn("assistant", full)
+                    memoryManager.addTurn("assistant", cleaned)
                     return@flow
                 }
+            }
+        }
+
+        // Fallback streaming if all providers failed quality check
+        val lastResort = fallbackAIEngine.generateResponse(systemPrompt, rollingHistory, userInput)
+        if (lastResort is AIResult.Success) {
+            memoryManager.addTurn("user", userInput)
+            memoryManager.addTurn("assistant", lastResort.text)
+            for (word in lastResort.text.split(" ")) {
+                emit("$word ")
             }
         }
     }

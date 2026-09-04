@@ -9,9 +9,10 @@ enum class AIRoutingLevel {
     DETERMINISTIC_RULE,     // Level 0: Direct rule / dictionary / grammar lookup
     LOCAL_SLM,              // Level 1: On-device Small Language Model (VaniFlow Local AI, PRIMARY)
     OPTIONAL_CLOUD,         // Level 2: Optional user-configured cloud provider
-    CONTEXT_AWARE_FALLBACK, // Level 3: Graceful context-aware degradation (no canned tree)
-    SCENARIO_MATRIX,        // Level 4: Deterministic scenario matrix (final last-resort fallback)
-    LOCAL_FALLBACK          // Legacy alias for SCENARIO_MATRIX
+    CONTEXT_AWARE_FALLBACK, // Level 3: Graceful context-aware degradation
+    SCENARIO_MATRIX,        // Level 4: Deterministic scenario matrix (legacy fallback)
+    LOCAL_FALLBACK,         // Legacy alias for SCENARIO_MATRIX
+    EMERGENCY_FALLBACK      // Level 5: Minimal emergency safe fallback
 }
 
 /**
@@ -21,7 +22,8 @@ data class AIResponseMetadata(
     val routingLevel: AIRoutingLevel,
     val latencyMs: Long = 0,
     val tokensGenerated: Int = 0,
-    val providerName: String = "Local Engine"
+    val providerName: String = "Local Engine",
+    val fallbackReason: String? = null
 )
 
 data class AITurn(
