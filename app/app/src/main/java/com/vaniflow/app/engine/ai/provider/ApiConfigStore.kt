@@ -37,6 +37,9 @@ class ApiConfigStore @Inject constructor(
     }
 
     private fun loadConfig() {
+        if (context == null) {
+            return
+        }
         // 1. Check SharedPreferences first (user customization overrides build config)
         val savedGroqKey = prefs?.getString("primary_api_key", "") ?: ""
         val savedGroqEndpoint = prefs?.getString("primary_endpoint", "") ?: ""

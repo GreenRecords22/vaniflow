@@ -17,7 +17,7 @@ object AudioConfig {
     const val FRAME_SIZE_SAMPLES = 512
     const val BYTES_PER_SAMPLE = 2 // 16-bit PCM
 
-    const val SILENCE_TIMEOUT_MS = 900L // 900ms silence before concluding speech turn
+    const val SILENCE_TIMEOUT_MS = 650L // 650ms responsive silence before concluding speech turn
     const val SPEECH_ONSET_FRAMES = 2   // Consecutive speech frames to confirm speech start
 }
 

@@ -13,7 +13,7 @@ class AudioConfigTest {
         assertEquals(16000, AudioConfig.SAMPLE_RATE_HZ)
         assertEquals(512, AudioConfig.FRAME_SIZE_SAMPLES)
         assertEquals(2, AudioConfig.BYTES_PER_SAMPLE)
-        assertEquals(900L, AudioConfig.SILENCE_TIMEOUT_MS)
+        assertEquals(650L, AudioConfig.SILENCE_TIMEOUT_MS)
         assertEquals(2, AudioConfig.SPEECH_ONSET_FRAMES)
     }
 

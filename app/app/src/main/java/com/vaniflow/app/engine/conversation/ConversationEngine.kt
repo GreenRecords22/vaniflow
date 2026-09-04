@@ -605,28 +605,39 @@ class ConversationEngine private constructor(
                         _turns.value = currentTurns
                     }
 
-                    val sentences = SentenceSplitter.splitIntoSentences(sentenceBuffer.toString())
-                    if (sentences.size > 1) {
-                        val rawSentence = sentences.first()
-                        val readySentence = cleanSpokenText(rawSentence, character.name)
-                        sentenceBuffer.clear()
-                        sentenceBuffer.append(sentences.drop(1).joinToString(" "))
+                    val bufferText = sentenceBuffer.toString()
+                    val hasPunctuation = bufferText.contains('.') || bufferText.contains('!') || bufferText.contains('?') || bufferText.contains('\n')
+                    if (hasPunctuation) {
+                        val sentences = SentenceSplitter.splitIntoSentences(bufferText)
+                        if (sentences.isNotEmpty()) {
+                            val firstCandidate = sentences.first().trim()
+                            val isCompleteSentence = sentences.size > 1 || 
+                                firstCandidate.endsWith('.') || firstCandidate.endsWith('!') || firstCandidate.endsWith('?')
+                            
+                            if (isCompleteSentence && firstCandidate.isNotBlank()) {
+                                val readySentence = cleanSpokenText(firstCandidate, character.name)
+                                sentenceBuffer.clear()
+                                if (sentences.size > 1) {
+                                    sentenceBuffer.append(sentences.drop(1).joinToString(" "))
+                                }
 
-                        if (isInterrupted.get() || activeGenerationJob?.isCancelled == true) return@collect
+                                if (isInterrupted.get() || activeGenerationJob?.isCancelled == true) return@collect
 
-                        if (readySentence.isNotBlank()) {
-                            val qualityCheck = responseQualityGuard.validate(readySentence, userText, history, characterName = character.name)
-                            if (qualityCheck is com.vaniflow.app.engine.ai.guard.QualityCheckResult.Valid) {
-                                _state.value = ConversationState.AI_SPEAKING
-                                val ttsRes = ttsEngine.speak(readySentence, character.voiceId, character.speakingRate)
-                                when (ttsRes) {
-                                    is TTSResult.Error -> {
-                                        _errorMessage.value = "I couldn't play that response. Tap to retry."
-                                        _state.value = ConversationState.LISTENING
-                                        return@collect
+                                if (readySentence.isNotBlank()) {
+                                    val qualityCheck = responseQualityGuard.validate(readySentence, userText, history, characterName = character.name)
+                                    if (qualityCheck is com.vaniflow.app.engine.ai.guard.QualityCheckResult.Valid) {
+                                        _state.value = ConversationState.AI_SPEAKING
+                                        val ttsRes = ttsEngine.speak(readySentence, character.voiceId, character.speakingRate)
+                                        when (ttsRes) {
+                                            is TTSResult.Error -> {
+                                                _errorMessage.value = "I couldn't play that response. Tap to retry."
+                                                _state.value = ConversationState.LISTENING
+                                                return@collect
+                                            }
+                                            is TTSResult.Interrupted -> return@collect
+                                            else -> Unit
+                                        }
                                     }
-                                    is TTSResult.Interrupted -> return@collect
-                                    else -> Unit
                                 }
                             }
                         }

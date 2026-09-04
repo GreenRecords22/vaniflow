@@ -1,4 +1,4 @@
-﻿package com.vaniflow.app.engine.ai.provider.adapter
+package com.vaniflow.app.engine.ai.provider.adapter
 
 import com.vaniflow.app.engine.ai.AIResponseMetadata
 import com.vaniflow.app.engine.ai.AIResult
@@ -166,8 +166,8 @@ class OpenAICompatibleAdapter @Inject constructor() : CloudProviderAdapter {
         return buildJsonObject {
             put("model", model)
             put("messages", messages)
-            put("temperature", 0.7)
-            put("max_tokens", 256)
+            put("temperature", 0.6)
+            put("max_tokens", 160)
             put("stream", stream)
         }.toString()
     }
