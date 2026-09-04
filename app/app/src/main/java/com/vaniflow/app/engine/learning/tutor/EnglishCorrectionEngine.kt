@@ -79,7 +79,28 @@ class EnglishCorrectionEngine @Inject constructor() {
             requiresRetry = true
         ),
 
-        // 2. Past Time Markers with Present Verb: "yesterday I go" -> "yesterday I went"
+        // 2. Past Time Markers with Present Verb: "yesterday I go market" -> "yesterday I went to the market"
+        Rule(
+            ruleId = "tense_past_marker_go_market",
+            regex = "\\b(yesterday|last\\s+(?:night|week|month|year))\\s+(i|we|they|he|she)\\s+go\\s+market\\b".toRegex(RegexOption.IGNORE_CASE),
+            replacementTransform = { match -> "${match.groupValues[1]} ${match.groupValues[2]} went to the market" },
+            explanation = "Say 'went to the market' for completed actions in the past (e.g. 'Yesterday I went to the market').",
+            category = EnglishErrorCategory.TENSE,
+            severity = CorrectionSeverity.IMPORTANT,
+            requiresRetry = true
+        ),
+        Rule(
+            ruleId = "tense_i_go_market",
+            regex = "\\b(i|we|they|he|she)\\s+go\\s+market\\s*(yesterday|last\\s+(?:night|week|month|year))?\\b".toRegex(RegexOption.IGNORE_CASE),
+            replacementTransform = { match ->
+                val time = match.groupValues[2].trim()
+                if (time.isNotBlank()) "${match.groupValues[1]} went to the market $time" else "${match.groupValues[1]} went to the market"
+            },
+            explanation = "Say 'went to the market' when referring to going to the market in the past.",
+            category = EnglishErrorCategory.TENSE,
+            severity = CorrectionSeverity.IMPORTANT,
+            requiresRetry = true
+        ),
         Rule(
             ruleId = "tense_past_marker_go",
             regex = "\\b(yesterday|last\\s+(?:night|week|month|year))\\s+(i|we|they|he|she)\\s+go\\b".toRegex(RegexOption.IGNORE_CASE),
@@ -101,8 +122,21 @@ class EnglishCorrectionEngine @Inject constructor() {
         Rule(
             ruleId = "tense_i_go_place_yesterday",
             regex = "\\b(i|we|they|he|she)\\s+go\\s+([a-zA-Z]+)\\s+(yesterday|last\\s+(?:night|week|month|year))\\b".toRegex(RegexOption.IGNORE_CASE),
-            replacementTransform = { match -> "${match.groupValues[1]} went to ${match.groupValues[2]} ${match.groupValues[3]}" },
+            replacementTransform = { match ->
+                val place = match.groupValues[2]
+                val formattedPlace = if (place.equals("market", ignoreCase = true)) "to the market" else if (place.equals("home", ignoreCase = true) || place.equals("there", ignoreCase = true)) place else "to $place"
+                "${match.groupValues[1]} went $formattedPlace ${match.groupValues[3]}"
+            },
             explanation = "Use 'went to' when describing past travel to a place (e.g., 'went to Jaipur yesterday').",
+            category = EnglishErrorCategory.TENSE,
+            severity = CorrectionSeverity.IMPORTANT,
+            requiresRetry = true
+        ),
+        Rule(
+            ruleId = "tense_working_since_duration",
+            regex = "\\b(i|we|they)\\s+am\\s+working\\s+(?:here\\s+)?since\\s+(\\d+|two|three|four|five|six|seven|eight|nine|ten)\\s+(years?|months?|days?|hours?)\\b".toRegex(RegexOption.IGNORE_CASE),
+            replacementTransform = { match -> "I've been working here for ${match.groupValues[2]} ${match.groupValues[3]}" },
+            explanation = "Use present perfect continuous ('I've been working') with 'for' to express ongoing duration (e.g. 'I've been working here for 5 years').",
             category = EnglishErrorCategory.TENSE,
             severity = CorrectionSeverity.IMPORTANT,
             requiresRetry = true
@@ -124,6 +158,8 @@ class EnglishCorrectionEngine @Inject constructor() {
                 val place = match.groupValues[2]
                 if (place.equals("market", ignoreCase = true)) {
                     "$subj went to the market"
+                } else if (place.equals("home", ignoreCase = true)) {
+                    "$subj went home"
                 } else {
                     "$subj went to $place"
                 }
@@ -177,7 +213,8 @@ class EnglishCorrectionEngine @Inject constructor() {
             replacementTransform = { match -> "${match.groupValues[1]} is" },
             explanation = "'Everyone' and 'everybody' take singular verbs: use 'is' instead of 'are'.",
             category = EnglishErrorCategory.SUBJECT_VERB_AGREEMENT,
-            severity = CorrectionSeverity.IMPORTANT
+            severity = CorrectionSeverity.IMPORTANT,
+            requiresRetry = true
         ),
 
         // 4. Prepositions: "good in English" -> "good at English", "married with" -> "married to"
@@ -204,6 +241,24 @@ class EnglishCorrectionEngine @Inject constructor() {
             explanation = "Use 'for' with time durations (e.g., 'for 3 years'), and 'since' for a specific starting date.",
             category = EnglishErrorCategory.PREPOSITIONS,
             severity = CorrectionSeverity.IMPORTANT
+        ),
+        Rule(
+            ruleId = "prep_went_destination",
+            regex = "\\b(i|he|she|we|they)\\s+went\\s+(jaipur|delhi|mumbai|bangalore|goa|london|paris|market|school|college|office|hospital|station|village|city)\\b".toRegex(RegexOption.IGNORE_CASE),
+            replacementTransform = { match ->
+                val subj = match.groupValues[1]
+                val rawDest = match.groupValues[2]
+                val dest = if (rawDest.first().isUpperCase()) rawDest else rawDest.replaceFirstChar { it.uppercase() }
+                if (dest.equals("market", true)) {
+                    "$subj went to the market"
+                } else {
+                    "$subj went to $dest"
+                }
+            },
+            explanation = "Use the preposition 'to' with 'went' when naming a destination (e.g. 'went to Jaipur').",
+            category = EnglishErrorCategory.PREPOSITIONS,
+            severity = CorrectionSeverity.IMPORTANT,
+            requiresRetry = false
         ),
         Rule(
             ruleId = "prep_listen_me",
@@ -244,7 +299,7 @@ class EnglishCorrectionEngine @Inject constructor() {
         Rule(
             ruleId = "word_order_where_you_are",
             regex = "\\bwhere\\s+you\\s+are\\s+going\\b".toRegex(RegexOption.IGNORE_CASE),
-            replacementTransform = { "where are you going" },
+            replacementTransform = { match -> if (match.value.first().isUpperCase()) "Where are you going" else "where are you going" },
             explanation = "In direct questions, place the helping verb before the subject: 'Where are you going?'",
             category = EnglishErrorCategory.WORD_ORDER,
             severity = CorrectionSeverity.IMPORTANT,
@@ -253,7 +308,7 @@ class EnglishCorrectionEngine @Inject constructor() {
         Rule(
             ruleId = "word_order_what_you_are",
             regex = "\\bwhat\\s+you\\s+are\\s+doing\\b".toRegex(RegexOption.IGNORE_CASE),
-            replacementTransform = { "what are you doing" },
+            replacementTransform = { match -> if (match.value.first().isUpperCase()) "What are you doing" else "what are you doing" },
             explanation = "In direct questions, invert the subject and verb: 'What are you doing?'",
             category = EnglishErrorCategory.WORD_ORDER,
             severity = CorrectionSeverity.IMPORTANT,
@@ -269,6 +324,23 @@ class EnglishCorrectionEngine @Inject constructor() {
         ),
 
         // 7. Uncountable Nouns & Plurals
+        Rule(
+            ruleId = "noun_numeral_plural",
+            regex = "\\b(two|three|four|five|six|seven|eight|nine|ten|many|several|a\\s+few)\\s+(brother|sister|friend|child|car|book|room|day|year|month|hour|dog|cat|student|teacher)\\b".toRegex(RegexOption.IGNORE_CASE),
+            replacementTransform = { match ->
+                val num = match.groupValues[1]
+                val noun = match.groupValues[2].lowercase()
+                val plural = when (noun) {
+                    "child" -> "children"
+                    else -> noun + "s"
+                }
+                "$num $plural"
+            },
+            explanation = "Use plural nouns after numbers greater than one (e.g., 'two brothers').",
+            category = EnglishErrorCategory.SINGULAR_PLURAL,
+            severity = CorrectionSeverity.IMPORTANT,
+            requiresRetry = true
+        ),
         Rule(
             ruleId = "noun_many_information",
             regex = "\\bmany\\s+informations?\\b".toRegex(RegexOption.IGNORE_CASE),
@@ -380,7 +452,7 @@ class EnglishCorrectionEngine @Inject constructor() {
         // Confidence-first decision: do not interrupt on low-severity minor slips
         val shouldCorrect = primarySeverity == CorrectionSeverity.CRITICAL || primarySeverity == CorrectionSeverity.IMPORTANT
         val timing = if (shouldCorrect) CorrectionTiming.AFTER_UTTERANCE else CorrectionTiming.NO_CORRECTION
-        val requiresRetry = errors.any { it.severity == CorrectionSeverity.IMPORTANT && (it.ruleIdentifier.startsWith("past_") || it.ruleIdentifier.startsWith("tense_") || it.ruleIdentifier.startsWith("sva_") || it.ruleIdentifier.startsWith("word_order_")) }
+        val requiresRetry = errors.any { err -> rules.find { it.ruleId == err.ruleIdentifier }?.requiresRetry == true }
 
         val primaryError = errors.first()
         val gentleFeedback = if (shouldCorrect) {

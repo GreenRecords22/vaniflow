@@ -108,7 +108,6 @@ class RemoteAIProvider @Inject constructor(
             } else if (result is AIResult.Error) {
                 val is429 = result.message.contains("429", ignoreCase = true) || result.message.contains("rate limit", ignoreCase = true)
                 recordFailure(isRateLimit = is429)
-                // Return error to trigger multi-provider failover
                 return result
             }
         }

@@ -631,21 +631,10 @@ class ConversationEngine private constructor(
         _state.value = ConversationState.LISTENING
     }
 
+    private val responseQualityGuard: com.vaniflow.app.engine.ai.guard.ResponseQualityGuard = com.vaniflow.app.engine.ai.guard.ResponseQualityGuard()
+
     private fun cleanSpokenText(text: String, characterName: String): String {
-        var clean = text.trim()
-        val prefixes = listOf(
-            "$characterName:", "$characterName :",
-            "Assistant:", "Assistant :",
-            "System:", "System :",
-            "AI:", "AI :",
-            "User:", "User :"
-        )
-        for (prefix in prefixes) {
-            if (clean.startsWith(prefix, ignoreCase = true)) {
-                clean = clean.substring(prefix.length).trim()
-            }
-        }
-        return clean
+        return responseQualityGuard.cleanPrefixes(text, characterName)
     }
 
     fun endSession(): SessionScore {
