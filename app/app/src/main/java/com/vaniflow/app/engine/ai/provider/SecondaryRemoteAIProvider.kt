@@ -71,7 +71,6 @@ class SecondaryRemoteAIProvider @Inject constructor(
 
         val hasCreds = configStore.hasSecondaryCredentials()
         if (hasCreds) {
-            val startTime = System.currentTimeMillis()
             val endpoint = configStore.getSecondaryEndpoint().ifBlank { config.endpoint }
             val apiKey = configStore.getSecondaryApiKey()
             val model = configStore.getSecondaryModel().ifBlank { config.model }

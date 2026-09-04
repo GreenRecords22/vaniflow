@@ -89,7 +89,6 @@ class RemoteAIProvider @Inject constructor(
 
         val hasCreds = configStore.hasPrimaryCredentials() || configStore.isGatewayConfigured()
         if (hasCreds) {
-            val startTime = System.currentTimeMillis()
             val endpoint = configStore.getPrimaryEndpoint().ifBlank { config.endpoint }
             val apiKey = configStore.getPrimaryApiKey()
             val model = configStore.getPrimaryModel().ifBlank { config.model }
@@ -111,7 +110,7 @@ class RemoteAIProvider @Inject constructor(
             }
         }
 
-        // Offline / unconfigured test fallback
+        // Test fallback when credentials are not injected in unit test environment
         val charId = detectCharacter(systemPrompt)
         val text = dialogueEngine.generateResponse(charId, "", SkillLevel.INTERMEDIATE, conversationHistory, userInput)
         val latency = 50L

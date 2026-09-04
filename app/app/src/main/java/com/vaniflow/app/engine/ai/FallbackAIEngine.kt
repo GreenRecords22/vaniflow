@@ -81,28 +81,28 @@ class FallbackAIEngine @Inject constructor() : AIEngine {
 
         return when (character) {
             "rudra" -> when (index) {
-                0 -> "I'm having a brief connection hitch, but I heard you mention $subject! Could you repeat that once more?"
-                1 -> "My connection dropped for a second! Let's keep practicing—what more can you tell me about $subject?"
-                2 -> "Hey, I had trouble processing that complete thought. Could you say that in another way?"
-                else -> "I missed the last part about $subject. Give it another shot so we can continue!"
+                0 -> "Hey! I need an active AI connection to answer about $subject. Please enter your free Groq API key in Profile > AI Cloud & Tutor Engine!"
+                1 -> "My AI engine needs an API key! Head over to Profile settings to paste your Groq or Gemini key, or get an offline model."
+                2 -> "To chat about $subject with real AI, please enter your Groq API key in Profile settings."
+                else -> "Connect your Groq or Gemini API key in Profile > AI Cloud & Tutor Engine to level up our conversation on $subject!"
             }
             "adwaita" -> when (index) {
-                0 -> "I experienced a momentary connection interruption regarding $subject. Please restate your thought."
-                1 -> "Our communication link paused briefly. How would you summarize your point about $subject again?"
-                2 -> "I was unable to fully process that statement. Please rephrase so we may continue our session."
-                else -> "Pardon the technical delay on $subject. Please articulate your thought once more."
+                0 -> "An active AI engine is required to discuss $subject. Please configure your Groq or Gemini API credentials in Profile Settings."
+                1 -> "Please provide a valid API key in Profile > AI Cloud & Tutor Engine to enable AI-powered dialogue."
+                2 -> "AI connection unconfigured. Kindly input your Groq or Gemini API key in Profile settings."
+                else -> "To proceed with our discussion on $subject, please configure your AI provider in Profile settings."
             }
             "shub" -> when (index) {
-                0 -> "A system processing delay occurred while analyzing $subject. Please restate your input."
-                1 -> "The network interrupted our turn. What was your key point regarding $subject?"
-                2 -> "I encountered an issue generating a full response. Could you rephrase your statement?"
-                else -> "Please repeat your statement about $subject so we can analyze it properly."
+                0 -> "AI engine is not configured. Please input your Groq API key in Profile > AI Cloud & Tutor Engine."
+                1 -> "Please enter your AI provider credentials in Profile settings to analyze $subject."
+                2 -> "No active AI provider detected. Please set up your Groq key in Profile settings."
+                else -> "Please configure your Groq API key in Profile settings so we can continue."
             }
             else -> when (index) { // Raya default
-                0 -> "I had a little trouble hearing the full thought about $subject. Could you tell me that again in another way?"
-                1 -> "My connection flickered for a moment! I'd love to hear more about $subject—could you repeat that?"
-                2 -> "I'm having a little trouble generating a response right now. Could you say that once more?"
-                else -> "I want to make sure I understand you properly regarding $subject. Could you try saying that again?"
+                0 -> "I need an active AI connection to answer about $subject. Please open Profile > AI Cloud & Tutor Engine to enter your free Groq API key, or download an offline model."
+                1 -> "To practice with full AI answers on $subject, please add your Groq API key in Profile settings or download an offline speaking model."
+                2 -> "My AI engine is currently unconfigured. Please enter your Groq or Gemini API key in Profile settings to chat."
+                else -> "Please configure your Groq API key in Profile > AI Cloud & Tutor Engine so I can give you complete spoken answers about $subject."
             }
         }
     }
