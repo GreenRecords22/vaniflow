@@ -41,7 +41,7 @@ data class ProfileUiState(
     val isApiSettingsOpen: Boolean = false,
     val groqApiKey: String = "",
     val geminiApiKey: String = "",
-    val groqModel: String = "llama-3.3-70b-versatile",
+    val groqModel: String = "openai/gpt-oss-20b",
     val geminiModel: String = "gemini-1.5-flash",
     val isGroqConfigured: Boolean = false,
     val isGeminiConfigured: Boolean = false,
@@ -93,7 +93,7 @@ class ProfileViewModel @Inject constructor(
             it.copy(
                 groqApiKey = apiConfigStore.getPrimaryApiKey(),
                 geminiApiKey = apiConfigStore.getSecondaryApiKey(),
-                groqModel = apiConfigStore.getPrimaryModel().ifBlank { "llama-3.3-70b-versatile" },
+                groqModel = apiConfigStore.getPrimaryModel().ifBlank { "openai/gpt-oss-20b" },
                 geminiModel = apiConfigStore.getSecondaryModel().ifBlank { "gemini-1.5-flash" },
                 isGroqConfigured = apiConfigStore.hasPrimaryCredentials(),
                 isGeminiConfigured = apiConfigStore.hasSecondaryCredentials()
@@ -289,7 +289,7 @@ class ProfileViewModel @Inject constructor(
         apiConfigStore.setPrimaryConfig(
             apiKey = state.groqApiKey,
             endpoint = "https://api.groq.com/openai/v1/chat/completions",
-            model = state.groqModel.ifBlank { "llama-3.3-70b-versatile" },
+            model = state.groqModel.ifBlank { "openai/gpt-oss-20b" },
             adapterType = "openai_compatible"
         )
         apiConfigStore.setSecondaryConfig(
@@ -304,7 +304,7 @@ class ProfileViewModel @Inject constructor(
 
     fun testGroqConnection() {
         val key = _uiState.value.groqApiKey.trim()
-        val model = _uiState.value.groqModel.trim().ifBlank { "llama-3.3-70b-versatile" }
+        val model = _uiState.value.groqModel.trim().ifBlank { "openai/gpt-oss-20b" }
         if (key.isBlank()) {
             _uiState.update { it.copy(apiTestStatus = "Please enter a Groq API key (starts with gsk_...)") }
             return

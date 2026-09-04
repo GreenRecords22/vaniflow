@@ -335,7 +335,9 @@ class RealOfflineTTSEngine @Inject constructor(
             }
 
             try {
-                deferred.await()
+                kotlinx.coroutines.withTimeoutOrNull(7000L) {
+                    deferred.await()
+                } ?: false
             } catch (e: Exception) {
                 activeAmplitudeJob?.cancel()
                 lipSyncController.onSpeechEnd()

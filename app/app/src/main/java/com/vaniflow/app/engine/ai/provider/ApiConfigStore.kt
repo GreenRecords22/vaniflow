@@ -22,7 +22,7 @@ class ApiConfigStore @Inject constructor(
 
     private var primaryApiKey: String = ""
     private var primaryEndpoint: String = "https://api.groq.com/openai/v1/chat/completions"
-    private var primaryModel: String = "llama-3.3-70b-versatile"
+    private var primaryModel: String = "openai/gpt-oss-20b"
     private var primaryAdapterType: String = "openai_compatible"
 
     private var secondaryApiKey: String = ""
@@ -63,7 +63,11 @@ class ApiConfigStore @Inject constructor(
         if (initialGroq.isNotBlank()) {
             primaryApiKey = initialGroq.trim()
             primaryEndpoint = savedGroqEndpoint.ifBlank { "https://api.groq.com/openai/v1/chat/completions" }
-            primaryModel = savedGroqModel.ifBlank { "llama-3.3-70b-versatile" }
+            var modelToUse = savedGroqModel.ifBlank { "openai/gpt-oss-20b" }
+            if (modelToUse.contains("llama-3.3") || modelToUse.contains("llama-3.1")) {
+                modelToUse = "openai/gpt-oss-20b"
+            }
+            primaryModel = modelToUse
             primaryAdapterType = savedGroqAdapter.ifBlank { "openai_compatible" }
         }
 

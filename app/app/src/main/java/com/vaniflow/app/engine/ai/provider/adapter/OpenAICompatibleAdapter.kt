@@ -47,6 +47,7 @@ class OpenAICompatibleAdapter @Inject constructor() : CloudProviderAdapter {
                 readTimeout = timeoutMs.toInt()
                 doOutput = true
                 setRequestProperty("Content-Type", "application/json")
+                setRequestProperty("User-Agent", "VaniFlow/1.0")
                 if (apiKey.isNotBlank()) {
                     setRequestProperty("Authorization", "Bearer $apiKey")
                 }
@@ -103,6 +104,7 @@ class OpenAICompatibleAdapter @Inject constructor() : CloudProviderAdapter {
             readTimeout = (timeoutMs * 2).toInt()
             doOutput = true
             setRequestProperty("Content-Type", "application/json")
+            setRequestProperty("User-Agent", "VaniFlow/1.0")
             if (apiKey.isNotBlank()) {
                 setRequestProperty("Authorization", "Bearer $apiKey")
             }
