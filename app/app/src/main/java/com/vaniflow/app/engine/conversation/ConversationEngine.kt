@@ -554,7 +554,8 @@ class ConversationEngine private constructor(
 
         val personaPrompt = CharacterPromptBuilder.buildPersonaPrompt(character)
         val scenarioPrompt = ScenarioPromptBuilder.buildScenarioPrompt(scenario)
-        val tutoringPrompt = learningMemoryManager.getTutoringPromptContextFromDecision(tutorDecision)
+        val responsePlan = learningMemoryManager.tutorDecisionEngine.createResponsePlan(tutorDecision, correctionDecision, character.name)
+        val tutoringPrompt = "${learningMemoryManager.getTutoringPromptContextFromDecision(tutorDecision)}\n${responsePlan.generationInstruction}".trim()
 
         val fullSystemPrompt = ConversationPromptBuilder.buildRuntimePrompt(
             characterName = character.name,
@@ -614,16 +615,19 @@ class ConversationEngine private constructor(
                         if (isInterrupted.get() || activeGenerationJob?.isCancelled == true) return@collect
 
                         if (readySentence.isNotBlank()) {
-                            _state.value = ConversationState.AI_SPEAKING
-                            val ttsRes = ttsEngine.speak(readySentence, character.voiceId, character.speakingRate)
-                            when (ttsRes) {
-                                is TTSResult.Error -> {
-                                    _errorMessage.value = "I couldn't play that response. Tap to retry."
-                                    _state.value = ConversationState.LISTENING
-                                    return@collect
+                            val qualityCheck = responseQualityGuard.validate(readySentence, userText, history, characterName = character.name)
+                            if (qualityCheck is com.vaniflow.app.engine.ai.guard.QualityCheckResult.Valid) {
+                                _state.value = ConversationState.AI_SPEAKING
+                                val ttsRes = ttsEngine.speak(readySentence, character.voiceId, character.speakingRate)
+                                when (ttsRes) {
+                                    is TTSResult.Error -> {
+                                        _errorMessage.value = "I couldn't play that response. Tap to retry."
+                                        _state.value = ConversationState.LISTENING
+                                        return@collect
+                                    }
+                                    is TTSResult.Interrupted -> return@collect
+                                    else -> Unit
                                 }
-                                is TTSResult.Interrupted -> return@collect
-                                else -> Unit
                             }
                         }
                     }
@@ -632,10 +636,13 @@ class ConversationEngine private constructor(
             val rawRemaining = sentenceBuffer.toString().trim()
             val remaining = cleanSpokenText(rawRemaining, character.name)
             if (remaining.isNotBlank() && !isInterrupted.get() && activeGenerationJob?.isCancelled != true) {
-                _state.value = ConversationState.AI_SPEAKING
-                val ttsRes = ttsEngine.speak(remaining, character.voiceId, character.speakingRate)
-                if (ttsRes is TTSResult.Error) {
-                    _errorMessage.value = "I couldn't play that response. Tap to retry."
+                val finalQualityCheck = responseQualityGuard.validate(remaining, userText, history, characterName = character.name)
+                if (finalQualityCheck is com.vaniflow.app.engine.ai.guard.QualityCheckResult.Valid) {
+                    _state.value = ConversationState.AI_SPEAKING
+                    val ttsRes = ttsEngine.speak(remaining, character.voiceId, character.speakingRate)
+                    if (ttsRes is TTSResult.Error) {
+                        _errorMessage.value = "I couldn't play that response. Tap to retry."
+                    }
                 }
             }
 
@@ -644,6 +651,8 @@ class ConversationEngine private constructor(
             }
 
             val finalClean = cleanSpokenText(accumulatedText.toString(), character.name)
+            val realProviderName = (aiEngine as? com.vaniflow.app.engine.ai.SmartAIRouter)?.lastActiveProviderName ?: "AIEngine"
+            val realModelName = (aiEngine as? com.vaniflow.app.engine.ai.SmartAIRouter)?.lastActiveModel ?: "Core"
             VaniFlowConversationTracer.recordTurn(
                 ConversationTurnTrace(
                     turnNumber = _turns.value.count { it.speaker == ConversationTurn.Speaker.USER },
@@ -653,8 +662,8 @@ class ConversationEngine private constructor(
                     tutorAction = tutorDecision.action.name,
                     correctionCategory = correctionDecision.detectedErrors.firstOrNull()?.category?.name,
                     correctionDetails = correctionDecision.detectedErrors.firstOrNull()?.explanation,
-                    providerName = "SmartAIRouter",
-                    routingLevel = "STREAMING_LLM",
+                    providerName = realProviderName,
+                    routingLevel = realModelName,
                     qualityStatus = "PASS",
                     regenerationAttempts = 0,
                     finalSpokenResponse = finalClean,

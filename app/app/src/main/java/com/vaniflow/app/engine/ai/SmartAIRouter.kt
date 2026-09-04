@@ -50,6 +50,11 @@ class SmartAIRouter @Inject constructor(
     private val promptVersion: String = "2.0"
     private val responseQualityGuard: ResponseQualityGuard = ResponseQualityGuard()
 
+    @Volatile var lastActiveProviderName: String = "SmartAIRouter"
+        private set
+    @Volatile var lastActiveModel: String = "Core"
+        private set
+
     /** Backward-compatible constructor for testing with legacy local + cloud provider arguments. */
     constructor(
         localAIEngine: LocalAIEngine,
@@ -176,6 +181,8 @@ class SmartAIRouter @Inject constructor(
 
                 if (candidateResult != null) {
                     val finalText = candidateResult.text
+                    lastActiveProviderName = candidateResult.metadata.providerName.ifBlank { provider.providerName }
+                    lastActiveModel = provider.config.model
                     RepetitionGuard.record(finalText)
                     cacheKnowledgeIfEligible(userInput, finalText, rollingHistory, decision.isSensitive)
                     val inTokens = ContextManager.estimateTokenCount(memoryPrompt) + ContextManager.estimateTokenCount(userInput)
@@ -189,6 +196,8 @@ class SmartAIRouter @Inject constructor(
         }
 
         // Final last-resort fallback
+        lastActiveProviderName = "EMERGENCY_FALLBACK"
+        lastActiveModel = "emergency_templates"
         val lastResort = fallbackAIEngine.generateResponse(systemPrompt, rollingHistory, userInput)
         if (lastResort is AIResult.Success) {
             memoryManager.addTurn("user", userInput)
@@ -215,6 +224,8 @@ class SmartAIRouter @Inject constructor(
         ) {
             val direct = decision.directResponse ?: "Here is what I remember."
             val tokensSaved = decision.estimatedTokensAvoided
+            lastActiveProviderName = if (decision.type == ResponseDecisionType.MEMORY_ONLY) "Session Memory Engine" else "Local Knowledge Cache"
+            lastActiveModel = "Cache_v1"
             usageTracker.recordTurn("cache_memory_saver", 10, tokensSaved, 5, isCacheHit = true)
             memoryManager.addTurn("user", userInput)
             memoryManager.addTurn("assistant", direct)
@@ -237,14 +248,20 @@ class SmartAIRouter @Inject constructor(
             if (provider.isAvailable()) {
                 var anyToken = false
                 val collected = StringBuilder()
-                provider.streamResponse(memoryPrompt, rollingHistory, userInput).collect { token ->
-                    if (token.isNotBlank()) anyToken = true
-                    collected.append(token)
-                    emit(token)
+                try {
+                    provider.streamResponse(memoryPrompt, rollingHistory, userInput).collect { token ->
+                        if (token.isNotBlank()) anyToken = true
+                        collected.append(token)
+                        emit(token)
+                    }
+                } catch (_: Exception) {
+                    // Failover to next provider in cascade
                 }
                 val full = collected.toString().trim()
                 if (anyToken && full.isNotBlank()) {
                     val cleaned = responseQualityGuard.cleanPrefixes(full, activeCharacterId)
+                    lastActiveProviderName = provider.providerName
+                    lastActiveModel = provider.config.model
                     RepetitionGuard.record(cleaned)
                     cacheKnowledgeIfEligible(userInput, cleaned, rollingHistory, decision.isSensitive)
                     memoryManager.addTurn("user", userInput)
@@ -255,6 +272,8 @@ class SmartAIRouter @Inject constructor(
         }
 
         // Fallback streaming if all providers failed quality check
+        lastActiveProviderName = "EMERGENCY_FALLBACK"
+        lastActiveModel = "emergency_templates"
         val lastResort = fallbackAIEngine.generateResponse(systemPrompt, rollingHistory, userInput)
         if (lastResort is AIResult.Success) {
             memoryManager.addTurn("user", userInput)

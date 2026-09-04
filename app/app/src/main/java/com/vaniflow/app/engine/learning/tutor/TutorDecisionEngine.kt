@@ -6,6 +6,7 @@ import com.vaniflow.app.engine.learning.tutor.model.MasteryState
 import com.vaniflow.app.engine.learning.tutor.model.TutorAction
 import com.vaniflow.app.engine.learning.tutor.model.TutorDecision
 import com.vaniflow.app.engine.learning.tutor.model.TutorLearnerState
+import com.vaniflow.app.engine.learning.tutor.model.TutorResponsePlan
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -282,5 +283,85 @@ class TutorDecisionEngine @Inject constructor(
             adaptiveDifficulty = state.currentDifficulty,
             coachingDirective = "Respond naturally and authentically. $speechDirective"
         )
+    }
+
+    /**
+     * Constructs a deterministic, typed [TutorResponsePlan] contract for the AI generation layer.
+     * Enforces that the LLM verbalizes the exact pedagogical intention without inventing corrections.
+     */
+    fun createResponsePlan(
+        decision: TutorDecision,
+        correctionDecision: TutorCorrectionDecision? = null,
+        characterId: String = "raya",
+        contextSummary: String? = null
+    ): TutorResponsePlan {
+        return when (decision.action) {
+            TutorAction.IMPORTANT_CORRECTION, TutorAction.CRITICAL_CORRECTION, TutorAction.ASK_RETRY -> {
+                val corrected = decision.spokenInterventionText ?: correctionDecision?.correctedSentence
+                TutorResponsePlan(
+                    tutorAction = decision.action,
+                    correctionRequired = true,
+                    correctionText = corrected,
+                    learnerRetryRequired = true,
+                    conversationIntent = "CORRECTION_AND_PRACTICE",
+                    contextSummary = contextSummary,
+                    characterStyle = characterId,
+                    generationInstruction = "Correct the learner's error. Use one concise explanation. Give the corrected sentence: '${corrected ?: "the natural phrasing"}'. Ask the learner to retry. Do not praise excessively. After retry, resume natural conversation."
+                )
+            }
+            TutorAction.PRAISE_SUCCESS -> {
+                TutorResponsePlan(
+                    tutorAction = decision.action,
+                    correctionRequired = false,
+                    learnerRetryRequired = false,
+                    conversationIntent = "PRAISE_AND_CONTINUE",
+                    contextSummary = contextSummary,
+                    characterStyle = characterId,
+                    generationInstruction = "Acknowledge the learner's correct retry with warm confirmation ('Yes, exactly right!'), then naturally continue the conversation."
+                )
+            }
+            TutorAction.GIVE_SECOND_HINT -> {
+                TutorResponsePlan(
+                    tutorAction = decision.action,
+                    correctionRequired = true,
+                    learnerRetryRequired = true,
+                    conversationIntent = "SECOND_HINT",
+                    contextSummary = contextSummary,
+                    characterStyle = characterId,
+                    generationInstruction = "Provide a gentle second hint for the target phrasing and invite them to try one more time."
+                )
+            }
+            TutorAction.PRACTICE_WEAK_CONCEPT -> {
+                TutorResponsePlan(
+                    tutorAction = decision.action,
+                    targetConcept = decision.suggestedTargetConcept,
+                    conversationIntent = "CONCEPT_PRACTICE",
+                    contextSummary = contextSummary,
+                    characterStyle = characterId,
+                    generationInstruction = "Guide the conversation to naturally elicit or practice: ${decision.suggestedTargetConcept}."
+                )
+            }
+            TutorAction.REUSE_VOCABULARY -> {
+                TutorResponsePlan(
+                    tutorAction = decision.action,
+                    targetConcept = decision.suggestedVocabularyToReuse,
+                    conversationIntent = "VOCABULARY_RECYCLING",
+                    contextSummary = contextSummary,
+                    characterStyle = characterId,
+                    generationInstruction = "Naturally include or elicit the vocabulary word '${decision.suggestedVocabularyToReuse}' in your response."
+                )
+            }
+            else -> {
+                TutorResponsePlan(
+                    tutorAction = decision.action,
+                    correctionRequired = false,
+                    learnerRetryRequired = false,
+                    conversationIntent = "NORMAL_CONVERSATION",
+                    contextSummary = contextSummary,
+                    characterStyle = characterId,
+                    generationInstruction = "Respond conversationally, warmly, and relevantly to what the user said. Directly address any question they asked before asking a follow-up. Do not invent grammar errors."
+                )
+            }
+        }
     }
 }

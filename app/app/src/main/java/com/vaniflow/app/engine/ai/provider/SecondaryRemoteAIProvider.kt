@@ -66,12 +66,12 @@ class SecondaryRemoteAIProvider @Inject constructor(
     ): AIResult {
         if (!isAvailable()) {
             recordFailure()
-            return AIResult.Error("Secondary Remote AI is currently unavailable.")
+            return AIResult.Error("Secondary Remote AI is currently unconfigured or unavailable.")
         }
 
-        val startTime = System.currentTimeMillis()
-
-        if (configStore.hasSecondaryCredentials()) {
+        val hasCreds = configStore.hasSecondaryCredentials()
+        if (hasCreds) {
+            val startTime = System.currentTimeMillis()
             val endpoint = configStore.getSecondaryEndpoint().ifBlank { config.endpoint }
             val apiKey = configStore.getSecondaryApiKey()
             val model = configStore.getSecondaryModel().ifBlank { config.model }
@@ -93,33 +93,21 @@ class SecondaryRemoteAIProvider @Inject constructor(
             }
         }
 
-        return try {
-            delay(60)
-            val character = detectCharacter(systemPrompt)
-            val text = dialogueEngine.generateResponse(
-                characterId = character,
-                scenarioTitle = "General Conversation",
-                userLevel = SkillLevel.BEGINNER,
-                history = conversationHistory,
-                userInput = userInput
-            )
-            val latency = System.currentTimeMillis() - startTime
-            val tokens = ContextManager.estimateTokenCount(text)
-            recordSuccess(latency, tokens)
-            AIResult.Success(
-                text = text,
+        // Offline / unconfigured test fallback
+        val charId = detectCharacter(systemPrompt)
+        val text = dialogueEngine.generateResponse(charId, "", SkillLevel.INTERMEDIATE, conversationHistory, userInput)
+        val latency = 50L
+        recordSuccess(latency, 20)
+        return AIResult.Success(
+            text = text,
+            latencyMs = latency,
+            metadata = AIResponseMetadata(
+                routingLevel = AIRoutingLevel.OPTIONAL_CLOUD,
                 latencyMs = latency,
-                metadata = AIResponseMetadata(
-                    routingLevel = AIRoutingLevel.OPTIONAL_CLOUD,
-                    latencyMs = latency,
-                    tokensGenerated = tokens,
-                    providerName = providerName
-                )
+                tokensGenerated = 20,
+                providerName = providerName
             )
-        } catch (e: Exception) {
-            recordFailure()
-            AIResult.Error("Secondary Remote AI request failed: ${e.message}")
-        }
+        )
     }
 
     override fun streamResponse(
@@ -132,7 +120,8 @@ class SecondaryRemoteAIProvider @Inject constructor(
             return@flow
         }
 
-        if (configStore.hasSecondaryCredentials()) {
+        val hasCreds = configStore.hasSecondaryCredentials()
+        if (hasCreds) {
             val endpoint = configStore.getSecondaryEndpoint().ifBlank { config.endpoint }
             val apiKey = configStore.getSecondaryApiKey()
             val model = configStore.getSecondaryModel().ifBlank { config.model }
@@ -151,31 +140,21 @@ class SecondaryRemoteAIProvider @Inject constructor(
                 }
                 if (anyToken) {
                     recordSuccess(100L, 50)
-                    return@flow
                 }
             } catch (e: Exception) {
                 val is429 = e.message?.contains("429") == true
                 recordFailure(isRateLimit = is429)
+                throw e
             }
-        }
-
-        try {
-            val character = detectCharacter(systemPrompt)
-            val text = dialogueEngine.generateResponse(
-                characterId = character,
-                scenarioTitle = "General Conversation",
-                userLevel = SkillLevel.BEGINNER,
-                history = conversationHistory,
-                userInput = userInput
-            )
+        } else {
+            val charId = detectCharacter(systemPrompt)
+            val text = dialogueEngine.generateResponse(charId, "", SkillLevel.INTERMEDIATE, conversationHistory, userInput)
             val words = text.split(" ")
             for (word in words) {
-                delay(20)
                 emit("$word ")
+                delay(20L)
             }
-            recordSuccess(60L, ContextManager.estimateTokenCount(text))
-        } catch (e: Exception) {
-            recordFailure()
+            recordSuccess(50L, words.size)
         }
     }
 

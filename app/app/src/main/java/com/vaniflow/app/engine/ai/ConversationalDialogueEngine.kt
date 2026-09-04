@@ -270,23 +270,21 @@ class ConversationalDialogueEngine @Inject constructor() {
 
             // 6. General Safe Conversational Fallback (Reflective, diverse, honest)
             else -> {
-                val cleaned = userInput.replace("[^a-zA-Z0-9 ]".toRegex(), "").trim()
-                val keySubject = cleaned.split(" ").filter { it.isNotBlank() }.takeLast(3).joinToString(" ").ifBlank { "that" }
                 when (charId) {
                     "raya" -> when (recentResponseHistory.size % 4) {
-                        0 -> "That's a really thoughtful point about $keySubject. How did you first get interested in that?"
-                        1 -> "Speaking about $keySubject is such a great way to practice English! What else can you share about it?"
-                        2 -> "I appreciate you bringing up $keySubject! What's your favorite part about it?"
-                        else -> "That's a lovely perspective regarding $keySubject. Tell me more about your thoughts!"
+                        0 -> "That's an interesting perspective! How did you first develop your interest in this?"
+                        1 -> "I really enjoy discussing this with you. What else can you share about your experience?"
+                        2 -> "That sounds fascinating! Could you tell me more about what you think?"
+                        else -> "I love how you expressed that. What other aspects of this would you like to explore?"
                     }
                     "rudra" -> when (recentResponseHistory.size % 3) {
-                        0 -> "Nice point on $keySubject! That's definitely worth talking through. What else comes to mind?"
-                        1 -> "Talking about $keySubject is awesome! How do you usually approach that?"
-                        else -> "Great topic with $keySubject! What's your take on the most exciting part?"
+                        0 -> "That's awesome! How do you usually approach that in your daily routine?"
+                        1 -> "Great point! What was the most exciting part about that for you?"
+                        else -> "I like that approach! Where should we take our practice next?"
                     }
-                    "adwaita" -> "An insightful observation regarding $keySubject. How would you elaborate on that?"
-                    "shub" -> "Understood regarding $keySubject. What was your main reason for that perspective?"
-                    else -> "That's an interesting perspective on $keySubject. Tell me more about your thoughts."
+                    "adwaita" -> "That is a thoughtful observation. How would you elaborate on that from a broader viewpoint?"
+                    "shub" -> "Understood. What was the main motivation behind that reasoning?"
+                    else -> "That is a great topic to explore. Could you tell me more about your thoughts?"
                 }
             }
         }

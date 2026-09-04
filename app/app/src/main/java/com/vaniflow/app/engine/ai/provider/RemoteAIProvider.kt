@@ -84,13 +84,12 @@ class RemoteAIProvider @Inject constructor(
     ): AIResult {
         if (!isAvailable()) {
             recordFailure()
-            return AIResult.Error("Primary Remote AI is currently unavailable.")
+            return AIResult.Error("Primary Remote AI is currently unconfigured or unavailable.")
         }
 
-        val startTime = System.currentTimeMillis()
-
-        // 1. Real HTTP API request if gateway or credentials are configured
-        if (configStore.hasPrimaryCredentials() || configStore.isGatewayConfigured()) {
+        val hasCreds = configStore.hasPrimaryCredentials() || configStore.isGatewayConfigured()
+        if (hasCreds) {
+            val startTime = System.currentTimeMillis()
             val endpoint = configStore.getPrimaryEndpoint().ifBlank { config.endpoint }
             val apiKey = configStore.getPrimaryApiKey()
             val model = configStore.getPrimaryModel().ifBlank { config.model }
@@ -112,34 +111,21 @@ class RemoteAIProvider @Inject constructor(
             }
         }
 
-        // 2. Resilient conversational intelligence fallback
-        return try {
-            delay(50)
-            val character = detectCharacter(systemPrompt)
-            val text = dialogueEngine.generateResponse(
-                characterId = character,
-                scenarioTitle = "General Conversation",
-                userLevel = SkillLevel.BEGINNER,
-                history = conversationHistory,
-                userInput = userInput
-            )
-            val latency = System.currentTimeMillis() - startTime
-            val tokens = ContextManager.estimateTokenCount(text)
-            recordSuccess(latency, tokens)
-            AIResult.Success(
-                text = text,
+        // Offline / unconfigured test fallback
+        val charId = detectCharacter(systemPrompt)
+        val text = dialogueEngine.generateResponse(charId, "", SkillLevel.INTERMEDIATE, conversationHistory, userInput)
+        val latency = 50L
+        recordSuccess(latency, 20)
+        return AIResult.Success(
+            text = text,
+            latencyMs = latency,
+            metadata = AIResponseMetadata(
+                routingLevel = AIRoutingLevel.OPTIONAL_CLOUD,
                 latencyMs = latency,
-                metadata = AIResponseMetadata(
-                    routingLevel = AIRoutingLevel.OPTIONAL_CLOUD,
-                    latencyMs = latency,
-                    tokensGenerated = tokens,
-                    providerName = providerName
-                )
+                tokensGenerated = 20,
+                providerName = providerName
             )
-        } catch (e: Exception) {
-            recordFailure()
-            AIResult.Error("Remote AI request failed: ${e.message}")
-        }
+        )
     }
 
     override fun streamResponse(
@@ -152,7 +138,8 @@ class RemoteAIProvider @Inject constructor(
             return@flow
         }
 
-        if (configStore.hasPrimaryCredentials() || configStore.isGatewayConfigured()) {
+        val hasCreds = configStore.hasPrimaryCredentials() || configStore.isGatewayConfigured()
+        if (hasCreds) {
             val endpoint = configStore.getPrimaryEndpoint().ifBlank { config.endpoint }
             val apiKey = configStore.getPrimaryApiKey()
             val model = configStore.getPrimaryModel().ifBlank { config.model }
@@ -171,32 +158,21 @@ class RemoteAIProvider @Inject constructor(
                 }
                 if (anyToken) {
                     recordSuccess(100L, 50)
-                    return@flow
                 }
             } catch (e: Exception) {
                 val is429 = e.message?.contains("429") == true
                 recordFailure(isRateLimit = is429)
+                throw e
             }
-        }
-
-        // Fallback streaming simulation
-        try {
-            val character = detectCharacter(systemPrompt)
-            val text = dialogueEngine.generateResponse(
-                characterId = character,
-                scenarioTitle = "General Conversation",
-                userLevel = SkillLevel.BEGINNER,
-                history = conversationHistory,
-                userInput = userInput
-            )
+        } else {
+            val charId = detectCharacter(systemPrompt)
+            val text = dialogueEngine.generateResponse(charId, "", SkillLevel.INTERMEDIATE, conversationHistory, userInput)
             val words = text.split(" ")
             for (word in words) {
-                delay(20)
                 emit("$word ")
+                delay(20L)
             }
-            recordSuccess(50L, ContextManager.estimateTokenCount(text))
-        } catch (e: Exception) {
-            recordFailure()
+            recordSuccess(50L, words.size)
         }
     }
 

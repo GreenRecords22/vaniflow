@@ -166,10 +166,11 @@ class SmartResponseDecisionEngine @Inject constructor(
 
     private fun isFactualKnowledgeQuery(lower: String): Boolean {
         return lower.startsWith("what is the capital") ||
-                lower.startsWith("capital of") ||
-                lower.startsWith("who is the president") ||
-                lower.startsWith("what are the vowels") ||
-                lower.startsWith("how many days in")
+            lower.startsWith("capital of") ||
+            lower.startsWith("who is the president") ||
+            lower.startsWith("how many days in") ||
+            lower.startsWith("what are the vowels") ||
+            lower.startsWith("vowels in english")
     }
 
     private fun checkEducationalDefinition(input: String): String? {
@@ -183,8 +184,6 @@ class SmartResponseDecisionEngine @Inject constructor(
                 "Articulate means having or showing the ability to speak fluently and coherently (adjective/verb, /ɑːˈtɪkjʊlət/). For example: \"He gave an articulate explanation.\""
             lower.contains("what are the vowels") || lower.contains("vowels in english") ->
                 "The primary vowels in the English alphabet are A, E, I, O, and U (with Y sometimes acting as a vowel sound)."
-            lower == "what is the capital of india" || lower == "capital of india" || lower == "what is india's capital" ->
-                "The capital of India is New Delhi."
             else -> null
         }
     }
