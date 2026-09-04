@@ -134,9 +134,18 @@ class EnglishCorrectionEngine @Inject constructor() {
         ),
         Rule(
             ruleId = "tense_working_since_duration",
-            regex = "\\b(i|we|they)\\s+am\\s+working\\s+(?:here\\s+)?since\\s+(\\d+|two|three|four|five|six|seven|eight|nine|ten)\\s+(years?|months?|days?|hours?)\\b".toRegex(RegexOption.IGNORE_CASE),
-            replacementTransform = { match -> "I've been working here for ${match.groupValues[2]} ${match.groupValues[3]}" },
-            explanation = "Use present perfect continuous ('I've been working') with 'for' to express ongoing duration (e.g. 'I've been working here for 5 years').",
+            regex = "\\b(i|we|they)\\s+am\\s+(living|staying|working)\\s+(?:here\\s+)?since\\s+(\\d+|two|three|four|five|six|seven|eight|nine|ten)\\s+(years?|months?|days?|hours?)\\b".toRegex(RegexOption.IGNORE_CASE),
+            replacementTransform = { match -> "I've been ${match.groupValues[2].lowercase()} here for ${match.groupValues[3]} ${match.groupValues[4]}" },
+            explanation = "Use present perfect continuous ('I have been living/working') with 'for' to express ongoing duration (e.g. 'I have lived here for 5 years').",
+            category = EnglishErrorCategory.TENSE,
+            severity = CorrectionSeverity.IMPORTANT,
+            requiresRetry = true
+        ),
+        Rule(
+            ruleId = "tense_past_meet",
+            regex = "\\b(yesterday|last\\s+(?:night|week|month|year))\\s+(i|we|they|he|she)\\s+meet\\b".toRegex(RegexOption.IGNORE_CASE),
+            replacementTransform = { match -> "${match.groupValues[1]} ${match.groupValues[2]} met" },
+            explanation = "Use past tense 'met' for completed actions in the past.",
             category = EnglishErrorCategory.TENSE,
             severity = CorrectionSeverity.IMPORTANT,
             requiresRetry = true
@@ -182,7 +191,7 @@ class EnglishCorrectionEngine @Inject constructor() {
         ),
         Rule(
             ruleId = "sva_he_dont",
-            regex = "\\b(he|she|it|my\\s+friend)\\s+don't\\b".toRegex(RegexOption.IGNORE_CASE),
+            regex = "\\b(he|she|it|my\\s+friend)\\s+(?:don't|dont|don’t)\\b".toRegex(RegexOption.IGNORE_CASE),
             replacementTransform = { match -> "${match.groupValues[1]} doesn't" },
             explanation = "Use 'doesn't' with third-person singular subjects (he/she/it).",
             category = EnglishErrorCategory.SUBJECT_VERB_AGREEMENT,
@@ -283,6 +292,23 @@ class EnglishCorrectionEngine @Inject constructor() {
             explanation = "Say 'in the morning' instead of 'at morning'.",
             category = EnglishErrorCategory.PREPOSITIONS,
             severity = CorrectionSeverity.IMPORTANT
+        ),
+        Rule(
+            ruleId = "prep_on_the_morning",
+            regex = "\\b(arrived|came|went|left)\\s+on\\s+the\\s+(morning|evening|afternoon)\\b".toRegex(RegexOption.IGNORE_CASE),
+            replacementTransform = { match -> "${match.groupValues[1]} in the ${match.groupValues[2]}" },
+            explanation = "Say 'in the morning' or 'in the evening' rather than 'on the morning'.",
+            category = EnglishErrorCategory.PREPOSITIONS,
+            severity = CorrectionSeverity.IMPORTANT
+        ),
+        Rule(
+            ruleId = "prep_discussed_about",
+            regex = "\\b(discuss|discussed|discussing)\\s+about\\b".toRegex(RegexOption.IGNORE_CASE),
+            replacementTransform = { match -> match.groupValues[1] },
+            explanation = "'Discuss' already means 'talk about', so do not use 'about' after it (e.g., 'discussed this problem').",
+            category = EnglishErrorCategory.PREPOSITIONS,
+            severity = CorrectionSeverity.IMPORTANT,
+            requiresRetry = true
         ),
 
         // 5. Articles: "a apple" -> "an apple", "an doctor" -> "a doctor"

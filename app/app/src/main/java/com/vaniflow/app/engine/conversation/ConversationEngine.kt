@@ -246,12 +246,7 @@ class ConversationEngine private constructor(
      * pollute the prompt history.
      */
     private fun pruneEmptyAiTurns() {
-        val turns = _turns.value
-        if (turns.isEmpty()) return
-        val last = turns.last()
-        if (last.speaker == ConversationTurn.Speaker.AI && last.text.isBlank() && last.correction == null) {
-            _turns.value = turns.dropLast(1)
-        }
+        _turns.value = _turns.value.filterNot { it.speaker == ConversationTurn.Speaker.AI && it.text.isBlank() && it.correction == null }
     }
 
     /**
@@ -321,6 +316,7 @@ class ConversationEngine private constructor(
         learningMemoryManager.ensureLoaded()
         usageTracker.ensureLoaded()
 
+        val turnStartTime = System.currentTimeMillis()
         isInterrupted.set(false)
         _errorMessage.value = null
         activeGenerationJob?.cancel()
@@ -386,6 +382,26 @@ class ConversationEngine private constructor(
 
             _state.value = ConversationState.AI_SPEAKING
             val ttsRes = ttsEngine.speak(spokenMsg, character.voiceId, character.speakingRate)
+
+            VaniFlowConversationTracer.recordTurn(
+                ConversationTurnTrace(
+                    turnNumber = _turns.value.count { it.speaker == ConversationTurn.Speaker.USER },
+                    sessionId = currentSessionId,
+                    userUtterance = userText,
+                    sttTranscript = userText,
+                    tutorAction = retryDecision.action.name,
+                    correctionCategory = retryCtx.originalError.category.name,
+                    correctionDetails = retryCtx.originalError.explanation,
+                    providerName = "TutorDecisionEngine",
+                    routingLevel = "RETRY_EVALUATION",
+                    qualityStatus = "PASS",
+                    regenerationAttempts = 0,
+                    finalSpokenResponse = spokenMsg,
+                    ttsStatus = if (ttsRes is TTSResult.Error) "ERROR" else "SENT",
+                    latencyMs = System.currentTimeMillis() - turnStartTime
+                )
+            )
+
             if (!isInterrupted.get() && ttsRes !is TTSResult.Error) {
                 _state.value = ConversationState.LISTENING
             } else if (ttsRes is TTSResult.Error) {
@@ -498,6 +514,26 @@ class ConversationEngine private constructor(
 
             _state.value = ConversationState.AI_SPEAKING
             val ttsRes = ttsEngine.speak(spokenCorrection, character.voiceId, character.speakingRate)
+
+            VaniFlowConversationTracer.recordTurn(
+                ConversationTurnTrace(
+                    turnNumber = _turns.value.count { it.speaker == ConversationTurn.Speaker.USER },
+                    sessionId = currentSessionId,
+                    userUtterance = userText,
+                    sttTranscript = userText,
+                    tutorAction = tutorDecision.action.name,
+                    correctionCategory = correctionDecision.detectedErrors.firstOrNull()?.category?.name,
+                    correctionDetails = spokenCorrection,
+                    providerName = "TutorDecisionEngine",
+                    routingLevel = "SPOKEN_CORRECTION",
+                    qualityStatus = "PASS",
+                    regenerationAttempts = 0,
+                    finalSpokenResponse = spokenCorrection,
+                    ttsStatus = if (ttsRes is TTSResult.Error) "ERROR" else "SENT",
+                    latencyMs = System.currentTimeMillis() - turnStartTime
+                )
+            )
+
             if (!isInterrupted.get() && ttsRes !is TTSResult.Error) {
                 _state.value = ConversationState.LISTENING
             } else if (ttsRes is TTSResult.Error) {
@@ -606,6 +642,26 @@ class ConversationEngine private constructor(
             if (accumulatedText.toString().isBlank() && !isInterrupted.get()) {
                 pruneEmptyAiTurns()
             }
+
+            val finalClean = cleanSpokenText(accumulatedText.toString(), character.name)
+            VaniFlowConversationTracer.recordTurn(
+                ConversationTurnTrace(
+                    turnNumber = _turns.value.count { it.speaker == ConversationTurn.Speaker.USER },
+                    sessionId = currentSessionId,
+                    userUtterance = userText,
+                    sttTranscript = userText,
+                    tutorAction = tutorDecision.action.name,
+                    correctionCategory = correctionDecision.detectedErrors.firstOrNull()?.category?.name,
+                    correctionDetails = correctionDecision.detectedErrors.firstOrNull()?.explanation,
+                    providerName = "SmartAIRouter",
+                    routingLevel = "STREAMING_LLM",
+                    qualityStatus = "PASS",
+                    regenerationAttempts = 0,
+                    finalSpokenResponse = finalClean,
+                    ttsStatus = "SENT",
+                    latencyMs = System.currentTimeMillis() - turnStartTime
+                )
+            )
 
             if (!isInterrupted.get() && activeGenerationJob?.isCancelled != true &&
                 (_state.value == ConversationState.AI_SPEAKING || _state.value == ConversationState.THINKING)
